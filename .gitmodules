@@ -1,0 +1,15 @@
+
+[submodule "protobuf"]
+	path = engine/src/main/cpp/3rd/protobuf
+	url = https://github.com/protocolbuffers/protobuf.git
+	branch = 25.x
+[submodule "lua"]
+	path = engine/src/main/cpp/3rd/lua
+	url = https://github.com/lua/lua.git
+	branch = v5.4
+[submodule "libhv"]
+	path = engine/src/main/cpp/3rd/libhv
+	url = https://github.com/ithewei/libhv.git
+[submodule "cjson"]
+	path = engine/src/main/cpp/3rd/cjson
+	url = https://github.com/DaveGamble/cJSON.git
