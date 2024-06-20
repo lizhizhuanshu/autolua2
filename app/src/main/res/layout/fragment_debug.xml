@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".activity.ui.debug.DebugFragment"
+    android:background="#D3D3D3">
+
+    <TableLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="10dp"
+        android:stretchColumns="1"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+        <TableRow
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/table_row_border">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/debug_switch" />
+            <androidx.appcompat.widget.SwitchCompat
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/switch_auto_debug"
+                android:layout_marginEnd="10dp"
+                android:checked="false"/>
+        </TableRow>
+        <TableRow
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/table_row_border">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/broadcast_location" />
+            <androidx.appcompat.widget.SwitchCompat
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/switch_broadcast_location"
+                android:layout_marginEnd="10dp"
+                android:checked="true"/>
+        </TableRow>
+        <TableRow
+            android:minHeight="45dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/table_row_border">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:text="@string/my_ip" />
+            <TextView
+                android:id="@+id/my_ip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:text="@string/null_ip"/>
+        </TableRow>
+        <TableRow
+            android:minHeight="45dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/table_row_border">
+            <TextView
+                android:id="@+id/et_my_port"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:text="@string/my_port" />
+            <EditText
+                android:id="@+id/listen_port"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:autofillHints=""
+                android:labelFor="@+id/et_my_port"
+                android:inputType="number"
+                android:text="@string/my_port_number"/>
+        </TableRow>
+        <TableRow
+            android:minHeight="45dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/table_row_border">
+            <TextView
+                android:id="@+id/et_debug_token"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:text="@string/login_debug_token" />
+            <EditText
+                android:id="@+id/debug_token"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:autofillHints=""
+                android:labelFor="@+id/et_debug_token"
+                android:inputType="textVisiblePassword"
+                android:text="@string/debug_default_password"/>
+        </TableRow>
+
+    </TableLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,25 @@
+
+syntax = "proto3";
+
+option java_package = "com.autolua.engine.proto";
+option java_outer_classname = "Authorization";
+option optimize_for = LITE_RUNTIME;
+
+
+enum SessionType {
+  NONE = 0;
+  KIT_AUTO_LUA_DEBUG = 1;
+  WORKER_AUTO_LUA_DEBUG = 2;
+  UI_DEBUG = 3;
+}
+
+
+message AuthorizationRequest {
+  string auth = 1;
+  SessionType sessionType = 2;
+}
+
+message AuthorizationResponse {
+  int32 code = 1;
+  string message = 2;
+}

@@ -13,3 +13,9 @@
 [submodule "cjson"]
 	path = engine/src/main/cpp/3rd/cjson
 	url = https://github.com/DaveGamble/cJSON.git
+[submodule "libjpeg"]
+	path = engine/src/main/cpp/3rd/libjpeg
+	url = https://github.com/libjpeg-turbo/libjpeg-turbo.git
+[submodule "autolua_vision"]
+	path = engine/src/main/cpp/3rd/autolua_vision
+	url = https://github.com/lizhizhuanshu/autolua_vision.git

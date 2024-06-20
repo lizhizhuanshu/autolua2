@@ -1,0 +1,131 @@
+
+syntax = "proto3";
+option java_package = "com.autolua.engine.proto";
+option java_outer_classname = "Interaction";
+option optimize_for = LITE_RUNTIME;
+
+
+
+enum MessageType{
+  kUnknown = 0;
+  kExecuteCode = 1;
+  kInterrupt = 2;
+  kPause = 3;
+  kResume = 4;
+  kNotifyState = 5;
+
+  kGetCode = 6;
+  kGetCodeResponse = 7;
+
+  kGetResource = 8;
+  kGetResourceResponse = 9;
+
+  kRpc = 10;
+  kRpcResponse = 11;
+
+  kLog = 14;
+
+  kStartDebuggerCommand = 15;
+  kStopDebuggerCommand = 16;
+  kStopEngineCommand = 17;
+
+  kSetRootDirCommand = 18;
+
+  kScreenShotRequest = 19;
+  kScreenShotResponse = 20;
+};
+
+enum CodeType{
+  kTextOrBinary = 0;
+  kText = 1;
+  kBinary = 2;
+}
+enum ResponseResult {
+  kSuccess = 0;
+  kUnknownError = 1;
+  kServiceNotFound = 2;
+  kMethodNotFound = 3;
+  kOtherError = 4;
+}
+
+enum NotificationSource {
+  kDebugger = 0;
+  kEngine = 1;
+  kWorker = 2;
+}
+
+message NotifyState{
+  int32 state = 1;
+  NotificationSource other = 2;
+}
+
+message ExecuteCode{
+  CodeType code_type = 2;
+  bytes code = 3;
+}
+
+enum CodeFromType {
+  kFile = 0;
+  kModule = 1;
+}
+
+
+message GetCodeRequest{
+  uint32 id = 1;
+  CodeFromType from_type = 2;
+  string path = 3;
+}
+
+message GetCodeResponse{
+  uint32 id = 1;
+  CodeType code_type = 3;
+  bytes data = 4;
+}
+
+
+message GetResourceRequest {
+  uint32 id = 1;
+  string path = 2;
+}
+
+message GetResourceResponse {
+  uint32 id = 1;
+  bytes data = 3;
+}
+
+message RpcRequest {
+  uint32 id = 1;
+  string service = 2;
+  string method = 3;
+  bytes bitmap = 4;
+  int32 bitmap_width = 5;
+  int32 bitmap_height = 6;
+  bytes data = 7;
+}
+
+message RpcResponse {
+  uint32 id = 1;
+  ResponseResult code = 2;
+  bytes data = 3;
+}
+
+
+message LogCommand{
+  string source = 1;
+  string message = 2;
+  int32 line = 3;
+  int32 level = 4;
+}
+
+message StartDebuggerCommand {
+  int32 port = 1;
+  string info = 2;
+}
+
+message SetRootDirCommand {
+  string root_dir = 1;
+}
+
+message ScreenShotResponse{
+  bytes data = 1;
+}

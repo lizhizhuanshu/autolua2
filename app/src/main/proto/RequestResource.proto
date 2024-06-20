@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option java_package = "com.autolua.autolua2.protobuf";
+option java_outer_classname = "RequestResource";
+option optimize_for = LITE_RUNTIME;
+
+enum ResourceType {
+  UNKNOWN = 0;
+  UI_CODE = 1;
+  BACKEND_CODE = 2;
+  RESOURCE = 3;
+}
+
+message GetResourceRequest {
+  ResourceType type = 1;
+  string path = 2;
+  int32 id = 3;
+}
+
+
+message GetResourceResponse {
+  bytes data = 1;
+  int32  id = 2;
+}
+

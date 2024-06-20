@@ -1,0 +1,14 @@
+{
+  "autolua2.debugger.token": "AutoLuaByLiZhi",
+  "Lua.diagnostics.globals": [
+    "lfs"
+  ],
+  "Lua.workspace.library": [
+      "/home/lizhi/Documents/code/autolua/AutoLuaWorker/doc/api",
+      "/home/lizhi/Documents/lua_modules_doc",
+      "/home/lizhi/Documents/3rd/MLN_Toolkit/out",
+      "/home/lizhi/Documents/code/autolua/autolua2/docs/hint",
+      "/usr/local/share/lua/5.4",
+      "${3rd}/lfs/library"
+  ],
+}

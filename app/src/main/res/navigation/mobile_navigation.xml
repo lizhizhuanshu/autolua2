@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mobile_navigation"
+    app:startDestination="@+id/navigation_debug">
+
+    <fragment
+        android:id="@+id/navigation_debug"
+        android:name="com.autolua.autolua2.activity.ui.debug.DebugFragment"
+        android:label="@string/title_debug"
+        tools:layout="@layout/fragment_debug" />
+
+    <fragment
+        android:id="@+id/navigation_script"
+        android:name="com.autolua.autolua2.activity.ui.script.ScriptFragment"
+        android:label="@string/title_script"
+        tools:layout="@layout/fragment_script" />
+
+    <fragment
+        android:id="@+id/navigation_my"
+        android:name="com.autolua.autolua2.activity.ui.my.MyFragment"
+        android:label="@string/title_my"
+        tools:layout="@layout/fragment_my" />
+</navigation>

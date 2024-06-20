@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/table_row_border">
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginEnd="3dp"
+        android:layout_weight="8">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:id="@+id/script_name"
+                android:text="@string/script_name"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="5"
+                android:layout_margin="2dp"
+                android:textSize="20sp"
+                android:maxLines="1"/>
+            <androidx.appcompat.widget.AppCompatSpinner
+                android:id="@+id/script_version"
+                android:layout_weight="5"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"/>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/script_description"
+            android:text="@string/script_description"
+            android:layout_margin="2dp"
+            android:maxLines="1"
+            android:textSize="13sp"/>
+    </LinearLayout>
+
+    <ImageButton
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:id="@+id/script_run"
+        android:contentDescription="@string/start_script"
+        android:src="@drawable/script_run"
+        android:layout_weight="1"
+        android:layout_marginEnd="5dp"
+        android:background="@drawable/button_selector" />
+    <ImageButton
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:id="@+id/delete_script"
+        android:scaleType="centerCrop"
+        android:contentDescription="@string/delete_script"
+        android:src="@drawable/delete_script"
+        android:layout_weight="1"
+        android:background="@drawable/button_selector"/>
+</LinearLayout>

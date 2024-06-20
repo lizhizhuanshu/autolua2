@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 当按钮被按下时的背景 -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#E0E0E0"/> <!-- 按下时的颜色 -->
+            <corners android:radius="4dp"/>
+        </shape>
+    </item>
+    <!-- 默认状态下的背景 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFF"/> <!-- 默认颜色 -->
+            <corners android:radius="4dp"/>
+        </shape>
+    </item>
+
+</selector>

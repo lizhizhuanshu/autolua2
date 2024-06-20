@@ -1,0 +1,41 @@
+<resources>
+    <string name="app_name">autolua2</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">First Fragment</string>
+    <string name="second_fragment_label">Second Fragment</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="title_activity_main">MainActivity</string>
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_notifications">Notifications</string>
+    <string name="title_debug">开发</string>
+    <string name="title_script">脚本</string>
+    <string name="title_my">我的</string>
+    <string name="my_ip">本机IP:</string>
+    <string name="my_port">监听端口:</string>
+    <string name="my_port_number">8176</string>
+    <string name="debug_switch">调试开发服务:</string>
+    <string name="null_ip">无</string>
+    <string name="add_script">add</string>
+    <string name="script_name">Script Name</string>
+    <string name="start_script">start script</string>
+    <string name="delete_script">delete script</string>
+    <string name="script_description">script description</string>
+    <string name="start_project">启动</string>
+    <string name="main_service_permission">Main Service Permission</string>
+    <string name="login_debug_token">调试Token:</string>
+
+    <string name="main_notification_channel_name">常驻服务</string>
+    <!--AutoLuaEngine Service  -->
+    <string name="engine_notification_title">AutoLua引擎服务</string>
+    <string name="engine_notification_content">AutoLua引擎服务正在运行</string>
+
+    <!--Debug Service  -->
+    <string name="debug_notification_title">AutoLua调试服务</string>
+    <string name="debug_notification_content">AutoLua调试服务正在运行</string>
+
+    <string name="debug_default_password">AutoLuaByLizhi</string>
+    <string name="broadcast_location">广播IP位置:</string>
+    <string name="engine_service">引擎服务</string>
+</resources>
