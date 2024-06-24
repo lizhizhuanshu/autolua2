@@ -13,7 +13,7 @@ val osName = System.getProperty("os.name").lowercase(Locale.getDefault())
 
 var osExt = if(osName == "linux") {
   "linux-x86_64"
-} else if(osName == "windows") {
+} else if(osName.startsWith("windows")) {
   "win32"
 }else if(osName == "mac os x") {
   "osx-x86_64"
@@ -92,9 +92,7 @@ tasks.register<Exec>("generateProto") {
   commandLine(protoc, *args.toTypedArray())
 }
 
-
-
-tasks.named("build"){
+tasks.named("preBuild") {
   dependsOn("generateProto")
 }
 

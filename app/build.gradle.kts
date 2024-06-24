@@ -1,4 +1,6 @@
+
 import com.google.protobuf.gradle.proto
+import de.undercouch.gradle.tasks.download.Download
 import java.util.Properties
 
 plugins {
@@ -6,6 +8,43 @@ plugins {
   alias(libs.plugins.jetbrains.kotlin.android)
   alias(libs.plugins.kotlin.kapt)
   id ("com.google.protobuf")
+  id("de.undercouch.download") version "4.1.2"
+}
+
+val mlnVersion = "1.0.0"
+
+val mlnAarUrl = "https://github.com/lizhizhuanshu/MLNlite/releases/download/v${mlnVersion}/MLN_Lite_dev_${mlnVersion}.zip"
+tasks.register<Download>("downloadMLN"){
+  description = "Downloads the MLN Lite aar file."
+  group = "customTasks"
+  val zipFile = layout.buildDirectory.file("mln${mlnVersion}.zip")
+  src(mlnAarUrl)
+  dest(zipFile)
+  overwrite(false)
+  onlyIfModified(true)
+}
+
+tasks.register<Copy>("installMLN"){
+  dependsOn("downloadMLN")
+  group = "customTasks"
+  description = "Unzips the MLN Lite aar."
+  val zipFile = layout.buildDirectory.file("mln${mlnVersion}.zip")
+  val installDir = layout.projectDirectory.dir("libs/${mlnVersion}")
+  from(zipTree(zipFile))
+  into(installDir)
+  doFirst {
+    mkdir(installDir)
+  }
+}
+
+tasks.named("preBuild").configure {
+  dependsOn("installMLN")
+}
+
+afterEvaluate {
+  tasks.matching { it.name == "extractIncludeDebugProto" || it.name == "extractIncludeReleaseProto" }.configureEach {
+    dependsOn("installMLN")
+  }
 }
 
 android {
@@ -109,6 +148,7 @@ protobuf {
   }
 }
 
+
 dependencies {
   implementation(project(":engine"))
   implementation(libs.androidx.swiperefreshlayout)
@@ -126,13 +166,9 @@ dependencies {
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.gson)
   implementation(libs.netty.all)
+  implementation(fileTree("libs/${mlnVersion}").include("annotation.jar","*release.aar"))
+  kapt(fileTree("libs/${mlnVersion}").include("processor.jar"))
 
-  implementation(files("../libs/HotReload_Adapter-release.aar"))
-//  releaseImplementation(files("../libs/HotReload_Empty-release.aar"))
-  implementation(files("../libs/mlncore-release.aar"))
-  implementation(files("../libs/mlnservice-release.aar"))
-  implementation(files("../libs/annotation.jar"))
-  kapt(files("../libs/processor.jar"))
   implementation(libs.firebase.crashlytics.buildtools)
   implementation(libs.androidx.baselibrary)
   implementation(libs.auto.common)
