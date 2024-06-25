@@ -82,3 +82,7 @@ void RemoteService::send(int type, const char *data, int length) {
 RemoteService::~RemoteService() {
     stop();
 }
+
+bool RemoteService::isRunning() {
+    return client_.isConnected();
+}

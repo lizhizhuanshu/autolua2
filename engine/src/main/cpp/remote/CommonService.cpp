@@ -120,7 +120,7 @@ void CommonService::onHandleMessage(int type, const char *data, int length) {
 
 
 void CommonService::onStateChange(ALEState state) {
-    if(!hasServices(RemoteServerInfo::OBSERVER)){
+    if(!hasServices(RemoteServerInfo::OBSERVER) || !isRunning()){
         return;
     }
     NotifyState command;
@@ -134,7 +134,7 @@ void CommonService::onStateChange(ALEState state) {
 
 int CommonService::loadResource(LuaInterpreter::SignalEvent *signalEvent, const char *path,
                                    std::string &out) {
-    if(!hasServices(RemoteServerInfo::RESOURCE_PROVIDER)){
+    if(!hasServices(RemoteServerInfo::OBSERVER) || !isRunning()){
         return 0;
     }
     GetResourceRequest request;
@@ -166,7 +166,7 @@ int CommonService::loadResource(LuaInterpreter::SignalEvent *signalEvent, const 
 int CommonService::loadModule(LuaInterpreter::SignalEvent *signalEvent, const char *path,
                                  std::string &out, int &type) {
 
-    if(!hasServices(RemoteServerInfo::CODE_PROVIDER)){
+    if(!hasServices(RemoteServerInfo::OBSERVER) || !isRunning()){
         return 0;
     }
     GetCodeRequest request;
@@ -224,7 +224,7 @@ void CommonService::putCallback(uint32_t id, CommonService::Callback callback) {
 
 int CommonService::loadFile(LuaInterpreter::SignalEvent *signalEvent, const char *path,
                                std::string &out, int &type) {
-    if(!hasServices(RemoteServerInfo::CODE_PROVIDER)){
+    if(!hasServices(RemoteServerInfo::OBSERVER) || !isRunning()){
         return 0;
     }
     GetCodeRequest request;
@@ -361,7 +361,7 @@ int CommonService::ServiceInLua::index(struct lua_State *L) {
 int CommonService::ServiceInLua::call(struct lua_State *L) {
     auto self = luaL_checkObject(CommonService::ServiceInLua,L,1);
     auto service = self->service_.lock();
-    if(!service){
+    if(!service || !service->isRunning()){
         service.~shared_ptr();
         return luaL_error(L,"service is dead");
     }

@@ -1,5 +1,6 @@
 package com.autolua.autolua2
 
+import com.autolua.autolua2.extension.UserInterface
 import com.autolua.autolua2.extension.imp.UserInterfaceImp
 import com.autolua.autolua2.mln.ActivityLifecycleMonitor
 import com.autolua.autolua2.mln.AutoLuaEngineResultCode
@@ -8,6 +9,11 @@ import com.autolua.autolua2.mln.GlobalStateListener
 import com.autolua.autolua2.project.ProjectManagerImp
 import com.autolua.autolua2.mln.provider.GlideImageProvider
 import com.autolua.autolua2.mln.ud.UI
+import com.autolua.autolua2.view.FloatController
+import com.autolua.autolua2.view.imp.FloatControllerImp
+import com.autolua.engine.core.AutoLuaEngine
+import com.autolua.engine.core.AutoLuaEngineProxy
+import com.autolua.engine.core.root.Proxy
 import com.immomo.mls.MLSBuilder
 import com.immomo.mls.MLSEngine
 import com.immomo.mls.`fun`.lt.SIApplication
@@ -65,8 +71,31 @@ class MainApp: android.app.Application() {
             ).
             buildWhenReady();
     UserInterfaceImp.instance.init(this)
+    FloatControllerImp.instance.init(this, 50)
+    FloatControllerImp.instance.setClickListener {
+      if(it == FloatController.State.IDLE){
+        AutoLuaEngineProxy.instance.startTask()
+      }else{
+        AutoLuaEngineProxy.instance.interrupt()
+      }
+    }
+
+    AutoLuaEngineProxy.instance.addObserver(AutoLuaEngine.Target.WORKER.value) {
+      FloatControllerImp.instance.updateState(
+        if(it == AutoLuaEngine.State.IDLE) FloatController.State.IDLE else FloatController.State.RUNNING)
+    }
+
+    AutoLuaEngineProxy.instance.setEngineCreator {
+      val engine = Proxy(this@MainApp)
+      engine.setLocalServices(arrayListOf(
+        AutoLuaEngine.LocalService("UI", UserInterfaceImp.instance, UserInterface::class.java)
+      ))
+      engine
+    }
+    AutoLuaEngineProxy.instance.start()
+
     startService(android.content.Intent(this,
-      com.autolua.autolua2.engine.AutoLuaEngineServiceImp::class.java))
+      MainService::class.java))
   }
 
   private fun getRootPath(): String {

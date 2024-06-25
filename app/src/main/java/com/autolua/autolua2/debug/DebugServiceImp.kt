@@ -4,9 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.ComponentName
 import android.content.Intent
-import android.content.ServiceConnection
 import android.graphics.Color
 import android.os.Binder
 import android.os.Build
@@ -20,8 +18,6 @@ import com.autolua.autolua2.activity.DebugActivity
 import com.autolua.engine.common.Observable
 
 import com.autolua.engine.common.Utils
-import com.autolua.autolua2.engine.AutoLuaEngineServiceImp
-import com.autolua.autolua2.engine.AutoLuaEngineService
 import com.autolua.engine.common.ObservableImpOnMainThread
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
@@ -32,6 +28,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.autolua.autolua2.base.Configure
 import com.autolua.autolua2.project.ProjectManagerImp
 import com.autolua.engine.core.AutoLuaEngine
+import com.autolua.engine.core.AutoLuaEngineProxy
 import com.immomo.luanative.hotreload.HotReloadServer
 import com.immomo.luanative.hotreload.Transporter
 import com.immomo.mls.HotReloadHelper
@@ -52,17 +49,18 @@ class DebugServiceImp : Service() {
   private fun tryChangeAndNotify(state: DebugService.State) {
     if (this.state == state) return
     this.state = state
+    Log.d(TAG,"update state $state")
     binder.notifyObservers(state)
   }
   private val componentState = AtomicReferenceArray<DebugService.State>(3)
   @Volatile
-  private var engineService:AutoLuaEngineService? = null
+  private var engineService:AutoLuaEngine = AutoLuaEngineProxy.instance
   private val debugServerObserver: (debugServerState: DebugServer.State)->Unit = {
     componentState.set(0,Utils.convertEnum(it))
     Log.d(TAG,"debugServerObserver $it")
     componentUpdateState()
   }
-  private val engineDebugObserver = { state:AutoLuaEngineService.State ->
+  private val engineDebugObserver = { state:AutoLuaEngine.State ->
     componentState.set(1,Utils.convertEnum(state))
     Log.d(TAG,"engineDebugObserver $state")
     componentUpdateState()
@@ -89,44 +87,50 @@ class DebugServiceImp : Service() {
     return -1
   }
 
+  private fun startStopping(){
+    tryChangeAndNotify(DebugService.State.STOPPING)
+    engineService.stopDebugger()
+    debugServer.stop()
+    broadcastServer.stop()
+  }
+
   private fun componentUpdateState(){
     synchronized(this){
       val endIndex = if(startBroadcast) 3 else 2
-      if(findComponentState(DebugService.State.STARTING,endIndex)>=0){
-        tryChangeAndNotify(DebugService.State.STARTING)
-        return
-      }
-      if(findComponentState(DebugService.State.STOPPING,endIndex)>=0){
-        tryChangeAndNotify(DebugService.State.STOPPING)
-        engineService?.stopDebugService()
-        debugServer.stop()
-        broadcastServer.stop()
-      }
-
-      if(findNotComponentState(DebugService.State.IDLE,endIndex)==-1){
-        tryChangeAndNotify(DebugService.State.IDLE)
-        return
-      }
-      if(findNotComponentState(DebugService.State.RUNNING,endIndex)==-1){
-        tryChangeAndNotify(DebugService.State.RUNNING)
-        Configure.rootDir = "http://127.0.0.1:${port!!}/"
-        return
+      when(state){
+        DebugService.State.IDLE -> {}
+        DebugService.State.STARTING -> {
+          if(findComponentState(DebugService.State.IDLE,endIndex)>-1 ||
+            findComponentState(DebugService.State.STOPPING,endIndex)>-1){
+            startStopping()
+            return
+          }
+          if(findNotComponentState(DebugService.State.RUNNING,endIndex)==-1){
+            tryChangeAndNotify(DebugService.State.RUNNING)
+            return
+          }
+        }
+        DebugService.State.RUNNING -> {
+          if(findComponentState(DebugService.State.IDLE,endIndex)>-1 ||
+            findComponentState(DebugService.State.STOPPING,endIndex)>-1){
+            startStopping()
+            return
+          }
+          if(findNotComponentState(DebugService.State.RUNNING,endIndex)==-1){
+            tryChangeAndNotify(DebugService.State.RUNNING)
+            return
+          }
+        }
+        DebugService.State.STOPPING -> {
+          if(findNotComponentState(DebugService.State.IDLE,endIndex)==-1){
+            tryChangeAndNotify(DebugService.State.IDLE)
+            return
+          }
+        }
       }
     }
   }
 
-
-  private val serviceConnection: ServiceConnection = object : ServiceConnection {
-    override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-      Log.d(TAG, "onServiceConnected: $name")
-      engineService = (service as AutoLuaEngineService)
-      engineService?.addObserver( AutoLuaEngine.Target.DEBUGGER.value,engineDebugObserver)
-    }
-
-    override fun onServiceDisconnected(name: ComponentName?) {
-      engineService = null
-    }
-  }
 
   private val receiver = object :BroadcastReceiver(){
     override fun onReceive(p0: Context?, p1: Intent?) {
@@ -138,35 +142,33 @@ class DebugServiceImp : Service() {
 
   override fun onCreate() {
     super.onCreate()
-    val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      val notificationChannel = NotificationChannel(
-        Constants.FOREGROUND_SERVICE_CHANNEL_ID,
-        resources.getString(R.string.main_notification_channel_name), NotificationManager.IMPORTANCE_HIGH
-      )
-
-      notificationChannel.enableLights(true)
-      notificationChannel.lightColor = Color.RED
-      notificationChannel.setShowBadge(true)
-      notificationChannel.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-      notificationManager.createNotificationChannel(notificationChannel)
-    }
-
-    val builder = NotificationCompat.Builder(this)
-    builder.setContentTitle(resources.getString(R.string.debug_notification_title))
-      .setSmallIcon(R.mipmap.ic_launcher_round)
-      .setContentText(resources.getString(R.string.debug_notification_content))
-      .setWhen(System.currentTimeMillis())
-
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-      builder.setChannelId(Constants.FOREGROUND_SERVICE_CHANNEL_ID)
-
-    val notification = builder.build()
-    notification.defaults = Notification.DEFAULT_SOUND
-    startForeground(Constants.DEBUG_SERVICE_NOTIFICATION_ID, notification)
-    Intent(this,AutoLuaEngineServiceImp::class.java).also { intent ->
-      bindService(intent, serviceConnection, BIND_AUTO_CREATE)
-    }
+//    val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+//    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//      val notificationChannel = NotificationChannel(
+//        Constants.FOREGROUND_SERVICE_CHANNEL_ID,
+//        resources.getString(R.string.main_notification_channel_name), NotificationManager.IMPORTANCE_HIGH
+//      )
+//
+//      notificationChannel.enableLights(true)
+//      notificationChannel.lightColor = Color.RED
+//      notificationChannel.setShowBadge(true)
+//      notificationChannel.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+//      notificationManager.createNotificationChannel(notificationChannel)
+//    }
+//
+//    val builder = NotificationCompat.Builder(this)
+//    builder.setContentTitle(resources.getString(R.string.debug_notification_title))
+//      .setSmallIcon(R.mipmap.ic_launcher_round)
+//      .setContentText(resources.getString(R.string.debug_notification_content))
+//      .setWhen(System.currentTimeMillis())
+//
+//    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+//      builder.setChannelId(Constants.FOREGROUND_SERVICE_CHANNEL_ID)
+//
+//    val notification = builder.build()
+//    notification.defaults = Notification.DEFAULT_SOUND
+//    startForeground(Constants.DEBUG_SERVICE_NOTIFICATION_ID, notification)
+    AutoLuaEngineProxy.instance.addObserver(AutoLuaEngine.Target.DEBUGGER.value,engineDebugObserver)
 
     LocalBroadcastManager.getInstance(this).registerReceiver(receiver, IntentFilter(DebugActivity.STARTED_BROADCAST))
   }
@@ -245,8 +247,7 @@ class DebugServiceImp : Service() {
     super.onDestroy()
     HotReloadServer.getInstance().setTransporter(null)
     HotReloadHelper.setCodeProvider(null)
-    engineService?.removeObserver(engineDebugObserver)
-    unbindService(serviceConnection)
+    engineService.removeObserver(engineDebugObserver)
     debugServer.removeObserver(debugServerObserver)
     debugServer.stop()
     broadcastServer.stop()
@@ -276,12 +277,23 @@ class DebugServiceImp : Service() {
         return
       }
 //      HotReloadServer.getInstance().start()
+      synchronized(this){
+        if(state != DebugService.State.IDLE) return
+        tryChangeAndNotify(DebugService.State.STARTING)
+      }
+      componentState.set(0,DebugService.State.STARTING)
+      componentState.set(1,DebugService.State.STARTING)
       if (startBroadcast) {
+        componentState.set(2,DebugService.State.STARTING)
         broadcastServer.start(port!!)
       }
+
+      Configure.rootDir = "http://127.0.0.1:${port!!}/"
       debugServer.start(port!!,auth!!) {
         if (it) {
-          engineService?.startDebugService(port!!,null,auth!!)
+          engineService.startDebugger(AutoLuaEngine.DebuggerConfigure(port!!).apply {
+            auth = this@DebugServiceImp.auth
+          })
         }else{
           debugServer.stop()
           Toast.makeText(this@DebugServiceImp,"start debug server failed",Toast.LENGTH_SHORT).show()
@@ -291,7 +303,7 @@ class DebugServiceImp : Service() {
 
     override fun stop() {
       HotReloadServer.getInstance().stop()
-      engineService?.stopDebugService()
+      engineService.stopDebugger()
       debugServer.stop()
       broadcastServer.stop()
     }

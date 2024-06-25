@@ -1,6 +1,7 @@
 package com.autolua.engine.common
 
 import android.os.Build
+import android.util.Log
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
 
@@ -23,8 +24,9 @@ open class ObservableImp<T>: Observable<T> {
 
   private class MyObserverTwo<T>(val callback: (T) -> Unit,val flags:Int?=null): Observer<T> {
     override fun onUpdate(data: T, flags: Int) {
-      if(this.flags == null || this.flags == flags)
+      if(this.flags == null || this.flags == flags){
         callback(data)
+      }
     }
   }
 
@@ -74,9 +76,9 @@ open class ObservableImp<T>: Observable<T> {
     addObserver(MyObserverTwo(observer,flags))
   }
 
-  override val listener:((T) -> Unit) by lazy {
-    {
-      notifyObservers(it)
+  override val listener:((data:T,flags:Int) -> Unit) by lazy {
+    {data,flags ->
+      notifyObservers(data,flags)
     }
   }
 

@@ -19,6 +19,7 @@ public:
 private:
     void onHandleMessage(const hv::ChannelPtr& conn, hv::Buffer* buf);
     void send(int type, const char* data, int length) override ;
+    bool isRunning() override;
     std::shared_ptr<hv::EventLoop> loop_;
     hv::TcpClientEventLoopTmpl<> client_;
     std::mutex sendMutex_;

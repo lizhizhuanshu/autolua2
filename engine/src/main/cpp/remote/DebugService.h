@@ -12,6 +12,7 @@
 class DebugService : public CommonService{
 protected:
     void send(int type, const char* data, int length) override ;
+    bool isRunning() override;
 public:
     DebugService(RemoteServerInfo info,std::shared_ptr<RPCParser> parser,
                  std::shared_ptr<hv::EventLoop> loop);

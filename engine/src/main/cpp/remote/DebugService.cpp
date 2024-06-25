@@ -237,3 +237,7 @@ void DebugService::onHandleOtherMessage(int type, const char *data, int length) 
     }
 }
 
+bool DebugService::isRunning() {
+    return state_ == ALEState::kRunning;
+}
+

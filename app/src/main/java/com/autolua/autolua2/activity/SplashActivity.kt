@@ -8,7 +8,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.autolua.autolua2.R
-import com.autolua.autolua2.engine.AutoLuaEngineServiceImp
+import com.autolua.autolua2.MainService
 
 @SuppressLint("CustomSplashScreen")
 class SplashActivity : AppCompatActivity() {
@@ -27,7 +27,6 @@ class SplashActivity : AppCompatActivity() {
 
   private fun start(){
     isSkip = true
-    startService(android.content.Intent(this, AutoLuaEngineServiceImp::class.java))
     startActivity(android.content.Intent(this, MainActivity::class.java))
   }
 

@@ -213,3 +213,7 @@ void FatherService::engineStateChanged(ALEState state) {
     command.SerializeToString(&data);
     send(MessageType::kNotifyState,data.data(),data.size());
 }
+
+bool FatherService::isRunning() {
+    return true;
+}

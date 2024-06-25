@@ -521,7 +521,7 @@ AutoLuaEngineService::InterpreterCodeProvider::loadFile(LuaInterpreter::SignalEv
             std::string targetPath(path);
             LOGI("loadFile %s  root %s",targetPath.c_str(),scriptRootDir.c_str());
             if(loadLocalScript(scriptRootDir,targetPath,out) == 0) {
-                LOGI("code = %s",out.c_str());
+//                LOGI("code = %s",out.c_str());
                 type = (int)LuaInterpreter::CodeMode::kTextOrBinary;
                 return 0;
             }

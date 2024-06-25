@@ -47,17 +47,17 @@ class AutoLuaEngineOnLocal (private val codeProvider: com.autolua.engine.core.co
     }
     private const val TAG = "AutoLuaEngineOnLocal"
     external fun changeLogChannel(channel: Int)
-    fun debuggerConfigure2RemoteServerConfigure(configure: DebuggerConfigure):RemoteServerConfigure{
-      val remoteServerConfigure = RemoteServerConfigure("debugger",configure.port)
-      remoteServerConfigure.auth = configure.auth
-      remoteServerConfigure.host = configure.host
-      remoteServerConfigure.services = RemoteServerConfigure.OBSERVER or
-              RemoteServerConfigure.CODE_PROVIDER or
-              RemoteServerConfigure.RESOURCE_PROVIDER or
-              RemoteServerConfigure.CONTROLLER
-      remoteServerConfigure.rpcServices.addAll(configure.rpcServices)
-      return remoteServerConfigure
-    }
+//    fun debuggerConfigure2RemoteServerConfigure(configure: DebuggerConfigure):RemoteServerConfigure{
+//      val remoteServerConfigure = RemoteServerConfigure("debugger",configure.port)
+//      remoteServerConfigure.auth = configure.auth
+//      remoteServerConfigure.host = configure.host
+//      remoteServerConfigure.services = RemoteServerConfigure.OBSERVER or
+//              RemoteServerConfigure.CODE_PROVIDER or
+//              RemoteServerConfigure.RESOURCE_PROVIDER or
+//              RemoteServerConfigure.CONTROLLER
+//      remoteServerConfigure.rpcServices.addAll(configure.rpcServices)
+//      return remoteServerConfigure
+//    }
   }
   private fun onStateChanged(state:Int,target:Int){
     Log.d(TAG,"onStateChanged  ${AutoLuaEngine.Target.fromInt(target)}  ${State.fromInt(state)}")
@@ -294,7 +294,7 @@ class AutoLuaEngineOnLocal (private val codeProvider: com.autolua.engine.core.co
 
   private external fun startDebugService(ptr: Long,configure: RemoteServerConfigure)
   override fun startDebugger(debuggerConfigure:DebuggerConfigure) {
-    startDebugService(nativePtr, debuggerConfigure2RemoteServerConfigure(debuggerConfigure))
+    startDebugService(nativePtr, Utils.debuggerConfigure2RemoteServerConfigure(debuggerConfigure))
   }
 
   private external fun stopDebugService(ptr:Long)

@@ -52,7 +52,7 @@ protected:
     Callback getCallback(uint32_t id);
     void putCallback(uint32_t id,Callback callback);
     void clearCallback(uint32_t id);
-
+    virtual bool isRunning()=0;
 private:
     void ensurePushServiceMetatable(struct lua_State*L);
     class ServiceInLua:private ServiceInfo {

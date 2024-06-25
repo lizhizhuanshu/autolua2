@@ -9,7 +9,8 @@ import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.autolua.autolua2.R
 import com.autolua.autolua2.databinding.ActivityProjectBinding
-import com.autolua.autolua2.engine.AutoLuaEngineServiceImp
+import com.autolua.autolua2.view.imp.FloatControllerImp
+import com.autolua.engine.core.AutoLuaEngineProxy
 import com.immomo.luanative.hotreload.HotReloadServer
 import com.immomo.mls.MLSBundleUtils
 import com.immomo.mls.MLSInstance
@@ -31,9 +32,8 @@ class ProjectActivity: AppCompatActivity(){
     instance.setData(initData)
     val mainRootDir = intent.getStringExtra("LUA_MAIN_DIR")
     binding.startProject.setOnClickListener {
-      startService(Intent(this, AutoLuaEngineServiceImp::class.java).apply {
-        putExtra("LUA_MAIN_DIR", mainRootDir)
-      })
+      AutoLuaEngineProxy.instance.setRootDir(mainRootDir!!)
+      FloatControllerImp.instance.reShow()
       finish()
     }
   }

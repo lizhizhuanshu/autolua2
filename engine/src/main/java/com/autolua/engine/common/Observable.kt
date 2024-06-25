@@ -11,6 +11,6 @@ interface Observable<T> {
 
 
   fun notifyObservers(data: T,flags: Int = 0)
-  val listener:((T) -> Unit)
+  val listener:((data:T,flags:Int) -> Unit)
 }
 

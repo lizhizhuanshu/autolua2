@@ -30,6 +30,7 @@ public:
     void engineStateChanged(ALEState state);
 protected:
     void send(int type, const char* data, int length) override ;
+    bool isRunning() override;
 private:
     void onHandleOtherMessage(int type, const char* data, int length) override;
     void initHio();

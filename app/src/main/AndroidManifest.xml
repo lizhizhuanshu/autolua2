@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <permission
-        android:name="com.autolua.autolua2.engine.AutoLuaEngineServiceImp"
+        android:name="com.autolua.autolua2.MainService"
         android:description="@string/main_service_permission"
         android:protectionLevel="signature" />
 
@@ -27,7 +27,7 @@
             android:enabled="true"
             android:exported="false"/>
         <service
-            android:name=".engine.AutoLuaEngineServiceImp"
+            android:name=".MainService"
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="specialUse"

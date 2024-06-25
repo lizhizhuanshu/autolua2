@@ -23,37 +23,30 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-fun Int.toPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
 
 @SuppressLint("ClickableViewAccessibility")
-class FloatControllerImp(context:Context, imageDiameter:Int) : BroadcastReceiver(),FloatController{
-  private val windowManager:WindowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-  private val imgButton = ImageButton(context)
+class FloatControllerImp private constructor() : BroadcastReceiver(),FloatController{
+  private lateinit var windowManager:WindowManager
+  private lateinit var imgButton:ImageButton
   @Volatile
   private var listener: ((state: FloatController.State) -> Unit)? = null
   private var state = FloatController.State.IDLE
   private var displayMetrics = Resources.getSystem().displayMetrics
   private var showing = false
-  private val layoutParams = WindowManager.LayoutParams().apply {
-    width = imageDiameter.toPx()
-    height = imageDiameter.toPx()
-    type =  if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-    }else{
-      WindowManager.LayoutParams.TYPE_PHONE
+
+  companion object{
+    val instance by lazy {
+      FloatControllerImp()
     }
-    format = PixelFormat.RGBA_8888
-    gravity = Gravity.START or Gravity.TOP
-    flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+    private const val TAG = "FloatControllerImp"
+    private fun Int.toPx(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
   }
 
-  private fun rawMove(x:Int,y:Int){
-    layoutParams.x = x
-    layoutParams.y = y
-    windowManager.updateViewLayout(imgButton,layoutParams)
-  }
-
-  init {
+  fun init(context:Context,imageDiameter:Int){
+    windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    layoutParams.width = imageDiameter.toPx()
+    layoutParams.height = imageDiameter.toPx()
+    imgButton = ImageButton(context)
     imgButton.scaleType = ImageView.ScaleType.CENTER_CROP;
     imgButton.setBackgroundColor(Color.TRANSPARENT);
     imgButton.setOnClickListener {
@@ -97,6 +90,25 @@ class FloatControllerImp(context:Context, imageDiameter:Int) : BroadcastReceiver
       }
     })
   }
+
+  private val layoutParams = WindowManager.LayoutParams().apply {
+    type =  if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+    }else{
+      WindowManager.LayoutParams.TYPE_PHONE
+    }
+    format = PixelFormat.RGBA_8888
+    gravity = Gravity.START or Gravity.TOP
+    flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+  }
+
+  private fun rawMove(x:Int,y:Int){
+    layoutParams.x = x
+    layoutParams.y = y
+    windowManager.updateViewLayout(imgButton,layoutParams)
+  }
+
+
   override fun onReceive(p0: Context?, p1: Intent?) {
     displayMetrics = Resources.getSystem().displayMetrics
     if(showing){

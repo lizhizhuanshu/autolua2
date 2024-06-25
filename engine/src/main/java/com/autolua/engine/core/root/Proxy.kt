@@ -12,6 +12,7 @@ import com.autolua.engine.core.composite.ResourceProvider
 import com.autolua.engine.core.AutoLuaEngine
 import com.autolua.engine.core.AutoLuaEngineOnLocal
 import com.autolua.engine.core.Callback
+import com.autolua.engine.core.Utils
 import com.autolua.engine.proto.Interaction
 import com.autolua.engine.proto.Interaction.ExecuteCode
 import com.autolua.engine.proto.Interaction.GetCodeRequest
@@ -43,9 +44,18 @@ class Proxy constructor(private val packageCodePath:String) :AutoLuaEngine,
     Log.d(TAG,"$target Change state to $newState")
 
     when(target){
-      AutoLuaEngine.Target.ENGINE -> state = newState
-      AutoLuaEngine.Target.WORKER -> workerState = newState
-      AutoLuaEngine.Target.DEBUGGER -> debugState = newState
+      AutoLuaEngine.Target.ENGINE -> {
+        if(state == newState) return
+        state = newState
+      }
+      AutoLuaEngine.Target.WORKER ->{
+        if(workerState == newState) return
+        workerState = newState
+      }
+      AutoLuaEngine.Target.DEBUGGER ->{
+        if(debugState == newState) return
+        debugState = newState
+      }
     }
     if(target == AutoLuaEngine.Target.WORKER && newState == AutoLuaEngine.State.IDLE){
       Log.d(TAG,"Release worker service")
@@ -325,7 +335,7 @@ class Proxy constructor(private val packageCodePath:String) :AutoLuaEngine,
 
   override fun startDebugger(debuggerConfigure: AutoLuaEngine.DebuggerConfigure) {
     if(debugState == AutoLuaEngine.State.IDLE){
-      val configure = AutoLuaEngineOnLocal.debuggerConfigure2RemoteServerConfigure(debuggerConfigure)
+      val configure = Utils.debuggerConfigure2RemoteServerConfigure(debuggerConfigure)
       this.debuggerConfigure = configure
       sendStartDebuggerCommand()
     }

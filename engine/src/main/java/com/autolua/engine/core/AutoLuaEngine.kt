@@ -29,7 +29,7 @@ interface AutoLuaEngine: Observable<AutoLuaEngine.State> {
   fun setRootDir(rootDir:String)
   fun start(callback: Callback? = null)
   fun stop()
-  fun getState(target:Target): State
+  fun getState(target:Target = Target.ENGINE): State
   fun attach(messageObserver: MessageObserver)
   fun detach(messageObserver: MessageObserver)
 
