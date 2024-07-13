@@ -13,7 +13,7 @@ public class Pointer {
     private float minor;
 
     private float size;
-    private boolean up;
+    private boolean up = true;
 
     public Pointer(int localId) {
         this.localId = localId;

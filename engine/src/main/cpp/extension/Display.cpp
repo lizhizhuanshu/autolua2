@@ -6,33 +6,43 @@
 
 #include <lua.hpp>
 #include <memory.h>
+#include <mutex>
+#include <csetjmp>
 #include "util.h"
 #include "lua_vision.h"
 #include <lodepng.h>
 #include "lua_context.h"
 #include "mlua.h"
+#include "my_log.h"
 #define DISPLAY_CLASS_NAME "com/autolua/engine/extension/display/Display"
 #define BYTEBUFFER_CLASS_NAME "java/nio/ByteBuffer"
 #define CLASS_ARG(className) "L" className ";"
 #define ARGS(args) "(" args ")"
 
-jclass Display::displayClassID_ = nullptr;
-jmethodID Display::getRotationMethodID = nullptr;
+static jmp_buf panic_jump;
 
-
-jmethodID Display::initializeMethodID = nullptr;
-jmethodID Display::isChangeDirectionMethodID = nullptr;
-jmethodID Display::getDisplayBufferMethodID  = nullptr;
-jmethodID Display::getHeightMethodID = nullptr;
-jmethodID Display::getRowStrideMethodID  = nullptr;
-jmethodID Display::getPixelStrideMethodID = nullptr;
-jmethodID Display::getWidthMethodID = nullptr;
-jmethodID Display::updateMethodID = nullptr;
 
 Display::Display(jobject obj)
     : Bitmap(), keepDisplay_(false){
     JNIEnv*env = GetJNIEnv();
     obj_ = env->NewWeakGlobalRef(obj);
+
+#define SET_JAVA_METHOD(methodName,classID,result,...) methodName##MethodID = env->GetMethodID(classID,#methodName,ARGS(__VA_ARGS__)result)
+    jobject local = env->FindClass(DISPLAY_CLASS_NAME);
+    displayClassID_ = (jclass)env->NewWeakGlobalRef(local);
+    env->DeleteLocalRef(local);
+    SET_JAVA_METHOD(getRotation, displayClassID_, "I");
+    SET_JAVA_METHOD(initialize, displayClassID_, "Z", "II");
+    SET_JAVA_METHOD(getDisplayBuffer, displayClassID_, CLASS_ARG(BYTEBUFFER_CLASS_NAME));
+    SET_JAVA_METHOD(getHeight, displayClassID_, "I");
+    SET_JAVA_METHOD(getWidth, displayClassID_, "I");
+    SET_JAVA_METHOD(getRowStride, displayClassID_, "I");
+    SET_JAVA_METHOD(getPixelStride, displayClassID_, "I");
+    SET_JAVA_METHOD(isChangeDirection, displayClassID_, "Z");
+    SET_JAVA_METHOD(update, displayClassID_, "V");
+#undef SET_JAVA_METHOD
+
+
     jmethodID method = env->GetMethodID(displayClassID_,"getBaseWidth", "()I");
     baseWidth_ = env->CallIntMethod(obj_,method);
     method = env->GetMethodID(displayClassID_,"getBaseHeight","()I");
@@ -60,6 +70,7 @@ bool Display::localReset(int w, int h) {
 
 
 int Display::screenshotToPng(int x, int y, int x1, int y1, std::vector<unsigned char> &out) {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     int rowSize = (x1-x)* pixelStride_;
     int size = rowSize*(y1-y);
     std::vector<unsigned char> data(size);
@@ -90,11 +101,13 @@ int Display::screenshot(int x,int y,int x1,int y1,SCREEN_SHOT_FORMAT format,std:
 
 Display::~Display() {
     JNIEnv*env = GetJNIEnv();
+    env->DeleteWeakGlobalRef(displayClassID_);
     env->DeleteWeakGlobalRef(obj_);
 }
 
 
 void Display::update() {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
 #define LocalCallIntMethod(env,method) env->CallIntMethod(obj_,method)
     JNIEnv*env = GetJNIEnv();
     env->CallVoidMethod(obj_,updateMethodID);
@@ -109,7 +122,7 @@ void Display::update() {
 
 int Display::getBaseSize(lua_State*L)
 {
-    auto * display = (Display*) lua_touserdata(L,1);
+    auto * display = (Display*) lua_touserdata(L, lua_upvalueindex(1));
     lua_pushinteger(L,display->baseWidth_);
     lua_pushinteger(L,display->baseHeight_);
     return 2;
@@ -117,50 +130,50 @@ int Display::getBaseSize(lua_State*L)
 
 
 int Display::getBaseDensity(lua_State *L) {
-    auto * display = (Display*) lua_touserdata(L,1);
+    auto * display = (Display*) lua_touserdata(L, lua_upvalueindex(1));
     lua_pushinteger(L,display->baseDensity_);
     return 1;
 }
 
 int Display::getBaseDirection(lua_State *L) {
-    auto * display = (Display*) lua_touserdata(L,1);
+    auto * display = (Display*) lua_touserdata(L, lua_upvalueindex(1));
     lua_pushinteger(L,display->baseDirection_);
     return 1;
 }
 
 int Display::getRotation(lua_State *L) {
-    auto * display = (Display*) lua_touserdata(L,1);
+    auto * display = (Display*) lua_touserdata(L, lua_upvalueindex(1));
     auto r = display->getRotation();
     lua_pushinteger(L,r);
     return 1;
 }
 
 int Display::isChangeDirection(lua_State *L) {
-    auto * display = (Display*) lua_touserdata(L,1);
+    auto * display = (Display*) lua_touserdata(L, lua_upvalueindex(1));
     lua_pushboolean(L, display->isChangeDirection());
     return 1;
 }
 
 int Display::reset(lua_State*L)
 {
-    auto * display = (Display*) lua_touserdata(L,1);
-    jint width = luaL_checkinteger(L,2);
-    jint height = luaL_checkinteger(L,3);
+    auto * display = (Display*) lua_touserdata(L, lua_upvalueindex(1));
+    jint width = luaL_checkinteger(L,1);
+    jint height = luaL_checkinteger(L,2);
     bool result= display->localReset(width,height);
     lua_pushboolean(L,result);
     return 1;
 };
 
 int Display::update(lua_State *L) {
-    auto * display = (Display*) lua_touserdata(L,1);
+    auto * display = (Display*) lua_touserdata(L, lua_upvalueindex(1));
     display->update();
     return 0;
 }
 
 int Display::keepDisplay(lua_State *L) {
-    auto * display = (Display*) lua_touserdata(L,1);
-    if(lua_isboolean(L,2)){
-        display->keepDisplay_ = lua_toboolean(L,2);
+    auto * display = (Display*) lua_touserdata(L, lua_upvalueindex(1));
+    if(lua_isboolean(L,1)){
+        display->keepDisplay_ = lua_toboolean(L,1);
         return 0;
     }
     lua_pushboolean(L,display->keepDisplay_);
@@ -168,22 +181,22 @@ int Display::keepDisplay(lua_State *L) {
 }
 
 int Display::updateAndKeepDisplay(lua_State *L) {
-    auto * display = (Display*) lua_touserdata(L,1);
+    auto * display = (Display*) lua_touserdata(L, lua_upvalueindex(1));
     display->keepDisplay_= true;
     display->update();
     return 0;
 }
 
 int Display::save(lua_State*L){
-    auto * display = (Display*) lua_touserdata(L,1);
-    int x = luaL_checkinteger(L,2);
-    int y = luaL_checkinteger(L,3);
-    int x1 = luaL_checkinteger(L,4);
-    int y1 = luaL_checkinteger(L,5);
-    const char* path = luaL_checkstring(L,6);
+    auto * display = (Display*) lua_touserdata(L, lua_upvalueindex(1));
+    int x = luaL_checkinteger(L,1);
+    int y = luaL_checkinteger(L,2);
+    int x1 = luaL_checkinteger(L,3);
+    int y1 = luaL_checkinteger(L,4);
+    const char* path = luaL_checkstring(L,5);
     Display::SCREEN_SHOT_FORMAT format = Display::kPng;
-    if(lua_isstring(L,7)){
-        const char* formatStr = lua_tostring(L,7);
+    if(lua_isstring(L,6)){
+        const char* formatStr = lua_tostring(L,6);
         if(strcmp(formatStr,"png") == 0)
             format = Display::kPng;
         else if(strcmp(formatStr,"jpeg") == 0)
@@ -208,16 +221,25 @@ int Display::save(lua_State*L){
     return 1;
 }
 
-static int transitMethod(lua_State *L) {
-    auto *display = (Display*) lua_touserdata(L,1);
+
+struct Text{
+    ~Text(){
+        LOGE("delete text %p",this);
+    }
+};
+
+int Display::transitMethod(lua_State *L) {
+    auto *display = (Display*) lua_touserdata(L, lua_upvalueindex(1));
     if(display->isChangeDirection()){
-        luaL_error(L,"display_ rotate");
+        luaL_error(L,"display rotate");
     }
     if (!display->isKeepDisplay()) {
         display->update();
     }
-    auto method = (lua_CFunction) lua_touserdata(L,lua_upvalueindex(1));
-    return method(L);
+    std::shared_lock<std::shared_mutex> lock(display->mutex_);
+    auto method = (lua_CFunction) lua_touserdata(L,lua_upvalueindex(2));
+    auto r= method(L);
+    return r;
 }
 
 struct WrapCompareColorMethodContext{
@@ -226,68 +248,14 @@ struct WrapCompareColorMethodContext{
     Display *display;
 };
 
-static void compareColorWrapper(const char* name, lua_CFunction method, void *data){
+void Display::compareColorWrapper(const char* name, lua_CFunction method, void *data){
     auto context = (WrapCompareColorMethodContext*) data;
+    lua_pushlightuserdata(context->L, context->display);
     lua_pushlightuserdata(context->L, (void*)method);
-    lua_pushcclosure(context->L, transitMethod, 1);
+    lua_pushcclosure(context->L, transitMethod, 2);
     lua_setfield(context->L, context->tableIndex, name);
 }
 
-void Display::pushObjectToLua(lua_State *L,jobject obj) {
-#define ONE_METHOD(name) {#name,name}
-    luaL_Reg  method[] = {
-            ONE_METHOD(getBaseSize),
-            ONE_METHOD(getRotation),
-            ONE_METHOD(getBaseDensity),
-            ONE_METHOD(getBaseDirection),
-            ONE_METHOD(isChangeDirection),
-            ONE_METHOD(reset),
-            ONE_METHOD(update),
-            ONE_METHOD(keepDisplay),
-            ONE_METHOD(updateAndKeepDisplay),
-            ONE_METHOD(save),
-            {"__gc",lua::finish<Display>},
-            {nullptr,nullptr}
-    };
-#undef ONE_METHOD
-    auto display = (Display*) lua_newuserdata(L,sizeof(Display));
-    auto context = toLuaContext(L);
-    context->display = display;
-    new(display)Display(obj);
-    luaL_newlib(L,method);
-    WrapCompareColorMethodContext s{};
-    s.L = L;
-    s.tableIndex = lua_absindex(L,-1);
-    s.display = display;
-    eachCompareColorMethod(compareColorWrapper, &s);
-    lua_pushvalue(L,-1);
-    lua_setfield(L,-2,"__index");
-    lua_setmetatable(L,-2);
-}
-
-void Display::releaseJavaDisplayClass(JNIEnv *env) {
-    if(displayClassID_){
-        env->DeleteWeakGlobalRef(displayClassID_);
-        displayClassID_ = nullptr;
-    }
-}
-
-void Display::initializeJavaDisplayClass(JNIEnv *env) {
-#define SET_JAVA_METHOD(methodName,classID,result,...) methodName##MethodID = env->GetMethodID(classID,#methodName,ARGS(__VA_ARGS__)result)
-    jobject local = env->FindClass(DISPLAY_CLASS_NAME);
-    displayClassID_ = (jclass)env->NewWeakGlobalRef(local);
-    env->DeleteLocalRef(local);
-    SET_JAVA_METHOD(getRotation, displayClassID_, "I");
-    SET_JAVA_METHOD(initialize, displayClassID_, "Z", "II");
-    SET_JAVA_METHOD(getDisplayBuffer, displayClassID_, CLASS_ARG(BYTEBUFFER_CLASS_NAME));
-    SET_JAVA_METHOD(getHeight, displayClassID_, "I");
-    SET_JAVA_METHOD(getWidth, displayClassID_, "I");
-    SET_JAVA_METHOD(getRowStride, displayClassID_, "I");
-    SET_JAVA_METHOD(getPixelStride, displayClassID_, "I");
-    SET_JAVA_METHOD(isChangeDirection, displayClassID_, "Z");
-    SET_JAVA_METHOD(update, displayClassID_, "V");
-#undef SET_JAVA_METHOD
-}
 
 
 int Display::_screenshot(int x, int y, int x1, int y1, Display::SCREEN_SHOT_FORMAT format,
@@ -308,4 +276,30 @@ int Display::getRotation() {
     jint r = env->CallIntMethod(obj_,getRotationMethodID);
     return r;
 }
+
+void Display::injectToLua(lua_State *L) {
+    luaL_Reg  method[] = {
+            {"getBaseSize",getBaseSize},
+            {"getBaseDensity",getBaseDensity},
+            {"getBaseDirection",getBaseDirection},
+            {"getRotation",getRotation},
+            {"isChangeDirection",isChangeDirection},
+            {"resetScreen",reset},
+            {"updateScreen",update},
+            {"keepScreen",keepDisplay},
+            {"updateAndKeepScreen",updateAndKeepDisplay},
+            {"saveScreen",save},
+            {nullptr,nullptr}
+    };
+    lua_geti(L,LUA_REGISTRYINDEX,LUA_RIDX_GLOBALS);
+    lua_pushlightuserdata(L,this);
+    luaL_setfuncs(L,method,1);
+    WrapCompareColorMethodContext s{};
+    s.L = L;
+    s.tableIndex = lua_absindex(L,-1);
+    s.display = this;
+    eachCompareColorMethodByUpData(compareColorWrapper, &s);
+    lua_pop(L,1);
+}
+
 

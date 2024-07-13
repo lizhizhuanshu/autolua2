@@ -11,8 +11,10 @@ struct  LuaContext{
     JNIEnv *env;
     jobject lua_context;
     jclass lua_context_class;
-    jmethodID hasMethod;
+    jmethodID indexMethod;
+    jmethodID newIndexMethod;
     jmethodID callMethod;
+    jmethodID invokeMethod;
     jmethodID releaseMethod;
     jfieldID ptr;
     void* signalEvent;

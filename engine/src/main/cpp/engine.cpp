@@ -18,8 +18,10 @@
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_com_autolua_engine_core_AutoLuaEngineOnLocal_createNative(JNIEnv *env, jobject thiz,jobject display) {
-    auto service = new AutoLuaEngineService(env,thiz,display);
+Java_com_autolua_engine_core_AutoLuaEngineOnLocal_createNative(JNIEnv *env, jobject thiz,jobject display,
+                                                               jobject input,
+                                                               jboolean isRoot) {
+    auto service = new AutoLuaEngineService(env,thiz,display,input,isRoot);
     return (jlong)service;
 }
 
@@ -65,10 +67,15 @@ static void detachJavaThread(){
     javaVM->DetachCurrentThread();
 }
 
-AutoLuaEngineService::AutoLuaEngineService(JNIEnv *env, jobject obj,jobject display)
+AutoLuaEngineService::AutoLuaEngineService(JNIEnv *env,
+                                           jobject obj,
+                                           jobject display,
+                                           jobject inputManager,
+                                           bool isRoot)
     :state_(ALEState::kIdle),
+     display_(display),
+     inputManager_(&display_,inputManager,isRoot),
     running_(false){
-    this->display_ = env->NewWeakGlobalRef(display);
     this->thiz = env->NewWeakGlobalRef(obj);
     jclass aClass = env->FindClass("com/autolua/engine/core/AutoLuaEngineOnLocal");
     newLuaContextMethodID = env->GetMethodID(aClass, "newLuaContext", "()J");
@@ -109,8 +116,7 @@ AutoLuaEngineService::AutoLuaEngineService(JNIEnv *env, jobject obj,jobject disp
     this->interpreter_->addResourceProvider(this->serviceManager_->getResourceProvider());
     this->interpreter_->attach(this->serviceManager_->getObserver());
 
-    this->input_ = std::make_shared<autolua::Input>();
-    this->input_->init();
+    thread_ = std::thread(std::bind(&AutoLuaEngineService::onRun,this));
 }
 
 AutoLuaEngineService::~AutoLuaEngineService() {
@@ -122,37 +128,23 @@ void AutoLuaEngineService::interrupt() {
     interpreter_->interrupt();
 }
 
-void AutoLuaEngineService::rawRun() {
-    auto exception = ALEState::kStarting;
-    if(state_.compare_exchange_strong(exception,ALEState::kRunning)){
-        notifyStateChanged(ALEState::kRunning);
-        if(auto p = debugService_) p->start();
-        if(auto p = fatherService_) p->start();
-        serviceManager_->start();
-        eventLoop_->run();
-        state_.store(ALEState::kIdle);
-        notifyStateChanged(ALEState::kIdle);
-    }
-}
 
-void AutoLuaEngineService::stop(bool wait_for_stop) {
+void AutoLuaEngineService::stop() {
     auto exception = ALEState::kRunning;
     if(state_.compare_exchange_strong(exception,ALEState::kStopping)){
-        notifyStateChanged(ALEState::kStopping);
-        if(auto p = debugService_) p->stop();
-        if(auto p = fatherService_) p->stop();
-        serviceManager_->stop();
-        interpreter_->interrupt();
-        eventLoop_->stop();
-    }
-    if(wait_for_stop) {
-        waitForStop();
+        eventLoop_->runInLoop([this]() {
+            notifyStateChanged(ALEState::kStopping);
+            if(auto p = debugService_) p->stop();
+            serviceManager_->stop();
+            interpreter_->interrupt();
+        });
     }
 }
 
 
 void AutoLuaEngineService::destroy() {
-    stop(true);
+    stop();
+    eventLoop_->stop();
     if(interpreter_ != nullptr){
         interpreter_->destroy();
         interpreter_ = nullptr;
@@ -170,6 +162,7 @@ void AutoLuaEngineService::destroy() {
         env->DeleteWeakGlobalRef(codeClazz);
         codeClazz = nullptr;
     }
+    thread_.join();
 }
 
 int AutoLuaEngineService::execute(const char *code, int32_t len, int codeType, int flags) {
@@ -201,8 +194,7 @@ void AutoLuaEngineService::startDebugService(const RemoteServerInfo info) {
             env->CallVoidMethod(thiz,onStateChangedMethodID,(jint)state,(jint)Target::kDebugger);
         });
         debugService_->onScreenShotRequest([this](std::vector<uint8_t>&data){
-            Display display(display_);
-            display.screenshot(-1,-1,-1,-1,Display::SCREEN_SHOT_FORMAT::kPng,data);
+            display_.screenshot(-1,-1,-1,-1,Display::SCREEN_SHOT_FORMAT::kPng,data);
         });
         debugService_->start();
     }else {
@@ -242,10 +234,13 @@ void AutoLuaEngineService::notifyStateChanged(ALEState state) {
 int AutoLuaEngineService::start() {
     auto exception = ALEState::kIdle;
     if(state_.compare_exchange_strong(exception,ALEState::kStarting)){
-        notifyStateChanged(ALEState::kStarting);
-        running_ = true;
-        std::thread t(std::bind(&AutoLuaEngineService::onRun, this));
-        t.detach();
+        eventLoop_->resume();
+        eventLoop_->runInLoop([this](){
+            notifyStateChanged(ALEState::kStarting);
+            if(auto q = debugService_) q->start();
+            serviceManager_->start();
+            notifyStateChanged(ALEState::kRunning);
+        });
         return 0;
     }
     return 1;
@@ -253,10 +248,8 @@ int AutoLuaEngineService::start() {
 
 void AutoLuaEngineService::onRun() {
     attachJavaThread();
-    rawRun();
+    eventLoop_->run();
     detachJavaThread();
-    running_ = false;
-    condVal_.notify_all();
 };
 
 
@@ -284,10 +277,7 @@ int AutoLuaEngineService::getState(AutoLuaEngineService::Target target) {
 }
 
 void AutoLuaEngineService::waitForStop() {
-    std::unique_lock<std::mutex> locker(mutex_);
-    condVal_.wait(locker,[this]{
-        return !running_;
-    });
+    thread_.join();
 }
 
 
@@ -308,11 +298,9 @@ lua_State *AutoLuaEngineService::LuaStateFactory::create() {
         lua_pushlstring(L,aRootDir.c_str(),aRootDir.size());
         lua_setglobal(L,"ROOT_DIR");
     }
-    luaL_requiref(L,"alv",luaopen_alv,1);
-    Display::pushObjectToLua(L,engine->display_);
-    lua_setglobal(L,"Screen");
-    engine->input_->pushObjectToLua(L);
-    lua_setglobal(L,"Input");
+    injectOther(L);
+    engine->display_.injectToLua(L);
+    engine->inputManager_.injectToLua(L);
     if(auto p = engine->debugService_)p->setup(L);
     if(auto p = engine->fatherService_)p->setup(L);
     engine->serviceManager_->setup(L);
@@ -640,7 +628,6 @@ JNIEXPORT jint JNI_OnLoad(JavaVM * vm, void * reserved)
     if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
         return -1;
     InitJavaVM(vm);
-    Display::initializeJavaDisplayClass(env);
     LOGE("JNI_OnLoad success\n");
     return  JNI_VERSION_1_6;
 }
@@ -651,7 +638,6 @@ JNIEXPORT void JNI_OnUnload(JavaVM * vm, void * reserved)
     JNIEnv * env = NULL;
     if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
         return;
-    Display::releaseJavaDisplayClass(env);
     LOGE("JNI_OnUnload success\n");
 }
 

@@ -1,7 +1,15 @@
 package com.autolua.engine.core
 
+import android.os.Parcelable
+import androidx.versionedparcelable.ParcelField
 import com.autolua.engine.base.LuaContext
 import com.autolua.engine.common.Observable
+import com.autolua.engine.extension.display.Display
+import com.autolua.engine.extension.input.InputManager
+import com.autolua.engine.extension.node.UiAutomator
+import kotlinx.parcelize.IgnoredOnParcel
+import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 
 interface AutoLuaEngine: Observable<AutoLuaEngine.State> {
   /**
@@ -30,21 +38,8 @@ interface AutoLuaEngine: Observable<AutoLuaEngine.State> {
   fun start(callback: Callback? = null)
   fun stop()
   fun getState(target:Target = Target.ENGINE): State
-  fun attach(messageObserver: MessageObserver)
-  fun detach(messageObserver: MessageObserver)
+  fun destroy()
 
-  fun addRemoteService(remoteServerConfigure: RemoteServerConfigure)
-  fun removeRemoteService(name:String)
-
-  fun setEnvironment(environment: List<Environment<*>>)
-  fun setLocalServices(services: List<LocalService<*>>)
-
-  fun addCodeProvider(codeProvider: CodeProvider)
-  fun clearCodeProvider()
-  fun addResourceProvider(resourceProvider: ResourceProvider)
-  fun clearResourceProvider()
-  fun removeCodeProvider(codeProvider: CodeProvider)
-  fun removeResourceProvider(resourceProvider: ResourceProvider)
 
   /**
    * worker 相关的方法
@@ -63,22 +58,22 @@ interface AutoLuaEngine: Observable<AutoLuaEngine.State> {
   fun startDebugger(debuggerConfigure: DebuggerConfigure)
   fun stopDebugger()
 
+  @Parcelize
+  data class DebuggerConfigure(val port:Int,
+                               var auth:String? = null,
+                               var host:String? = null ,
+                               var rpcServices:List<RPCServiceInfo> = listOf()) : Parcelable
 
-  data class DebuggerConfigure(val port:Int){
-    var auth:String? = null
-    var host:String? = null
-    var rpcServices = mutableListOf<RPCServiceInfo>()
-  }
-  data class RPCServiceInfo(val name:String){
-    constructor(name:String,methods:List<String>):this(name){
-      this.methods.addAll(methods)
-    }
-    var methods:MutableList<String> = mutableListOf();
-  }
-  data class RemoteServerConfigure(val name:String, val port:Int,var services:Int=0){
-    var auth:String? = null
-    var host:String? = null
-    val rpcServices = mutableListOf<RPCServiceInfo>()
+  @Parcelize
+  data class RPCServiceInfo(val name:String,
+      val methods:MutableList<String> = mutableListOf()) : Parcelable
+  @Parcelize
+  data class RemoteServerConfigure(val name:String,
+                                   val port:Int,
+                                   var services:Int=0,
+                                   var auth:String?=null,
+                                   var host:String?=null,
+                                   val rpcServices:MutableList<RPCServiceInfo> = mutableListOf()):Parcelable{
     companion object{
       const val CODE_PROVIDER =      0b00000001
       const val RESOURCE_PROVIDER =  0b00000010
@@ -105,8 +100,12 @@ interface AutoLuaEngine: Observable<AutoLuaEngine.State> {
     }
   }
 
-  data class Environment<T>(val key:String,val value:T){
-    enum class Type(val value:Int){
+  @Parcelize
+  data class Environment<T : Any>(val key:String,
+                                  val value:@RawValue T,
+                                  val type: Type = getType(value)):Parcelable{
+    @Parcelize
+    enum class Type(val value:Int) : Parcelable {
       STRING(0),
       LONG(1),
       DOUBLE(2),
@@ -118,20 +117,24 @@ interface AutoLuaEngine: Observable<AutoLuaEngine.State> {
         fun fromInt(value: Int) = entries.first { it.value == value }
       }
     }
-    val type = when(value){
-      is String -> Type.STRING
-      is Long -> Type.LONG
-      is Double -> Type.DOUBLE
-      is Boolean -> Type.BOOLEAN
-      is ByteArray -> Type.BYTE_ARRAY
-      is Int -> Type.INT
-      is Float -> Type.FLOAT
-      else -> throw IllegalArgumentException("Unsupported type")
+    companion object{
+      private fun getType(value:Any):Type{
+        return when(value){
+          is String -> Type.STRING
+          is Long -> Type.LONG
+          is Double -> Type.DOUBLE
+          is Boolean -> Type.BOOLEAN
+          is ByteArray -> Type.BYTE_ARRAY
+          is Int -> Type.INT
+          is Float -> Type.FLOAT
+          else -> throw IllegalArgumentException("Unsupported type")
+        }
+      }
     }
   }
 
-  
-  enum class State(val value:Int){
+  @Parcelize
+  enum class State(val value:Int):Parcelable{
     IDLE(0),
     STARTING(1),
     RUNNING(2),
@@ -183,6 +186,21 @@ interface AutoLuaEngine: Observable<AutoLuaEngine.State> {
     const val FLAG_NONE = 0
     const val FLAG_NEW_LUA = 0b00000001
     const val FLAG_NOT_RETAIN_LUA = 0b00000010
+  }
+
+  interface Builder {
+    fun addRemoteService(remoteServerConfigure: RemoteServerConfigure):Builder
+    fun addLocalService(localService: LocalService<*>):Builder
+    fun addLocalService(name:String,service:Any,thisInterface:Class<*>):Builder
+    fun addLocalService(name:String,serviceClass:Class<*>,thisInterface:Class<*>):Builder
+    fun addEnvironment(key:String,value:Any):Builder
+    fun addCodeProvider(codeProvider: CodeProvider):Builder
+    fun addResourceProvider(resourceProvider: ResourceProvider):Builder
+    fun setDisplay(display: Display):Builder
+    fun setInputManager(inputManager: InputManager):Builder
+    fun setUiAutomator(uiAutomator: UiAutomator):Builder
+    fun isRoot(isRoot:Boolean):Builder
+    fun build():AutoLuaEngine?
   }
 }
 

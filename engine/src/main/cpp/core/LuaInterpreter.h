@@ -29,7 +29,7 @@ public:
     {
         kNone =         0,
         kNewLua =          0b00000001,
-        kNotRetainLua =    0b00000010
+        kRetainLua =    0b00000010
     };
 
     class SignalEvent {
@@ -176,7 +176,7 @@ public:
     typedef std::function<void(int resultCode,int resultIndex,struct lua_State*)> Callback;
     typedef std::function<int(struct lua_State*L)> ErrorCallback;
 
-    LuaInterpreter(std::shared_ptr<LuaStateFactory> luaFactory);
+    explicit LuaInterpreter(std::shared_ptr<LuaStateFactory> luaFactory);
     ~LuaInterpreter();
     void attach(std::shared_ptr<Observer> observer,bool immediately = false);
     void detach(std::shared_ptr<Observer> observer);

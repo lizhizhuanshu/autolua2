@@ -35,7 +35,11 @@ void CommonService::onHandleMessage(int type, const char *data, int length) {
             }else if(command.code_type() == CodeType::kBinary){
                 codeMode = LuaInterpreter::CodeMode::kBinary;
             }
-            interpreter_->execute(command.code(),codeMode);
+            interpreter_->execute(command.code(),
+                                  codeMode,
+                                  LuaInterpreter::kNone,
+                                  nullptr,
+                                  std::bind(&CommonService::onErrorCall,this,std::placeholders::_1));
             break;
         }
         case MessageType::kInterrupt:{
@@ -334,6 +338,27 @@ CommonService::CommonService(const RemoteServerInfo info,std::shared_ptr<RPCPars
 
 void CommonService::onHandleOtherMessage(int type, const char *data, int length) {
     LOGE("unknown message type %d",type);
+}
+
+int CommonService::onErrorCall(struct lua_State *L) {
+    size_t size = 0;
+    const char* message = luaL_checklstring(L,-1,&size);
+    luaL_traceback(L,L,message,1);
+    message = luaL_checklstring(L,-1,&size);
+    lua_pop(L,1);
+    lua_Debug  debug;
+    bzero(&debug,sizeof debug);
+    lua_getstack(L,2,&debug);
+    lua_getinfo(L,"Sl",&debug);
+    LogCommand command;
+    command.set_source(debug.source?debug.source:"");
+    command.set_line(debug.currentline);
+    command.set_message(message,size);
+    command.set_level(1);
+    std::string data;
+    command.SerializeToString(&data);
+    send(MessageType::kLog,data.data(),data.size());
+    return 0;
 }
 
 

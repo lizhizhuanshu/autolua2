@@ -212,7 +212,7 @@ void LuaInterpreter::loop()
             callback_(r,errorCallback_?luaTop+2:luaTop+1, luaState_);
         }
         lua_settop(luaState_,luaTop);
-        if(executeMode_ & kNotRetainLua)
+        if(!(executeMode_ & kRetainLua))
         {
             LOGD("LuaInterpreter release lua_state");
             releaseLuaState();
@@ -282,7 +282,6 @@ int LuaInterpreter::lSleep(lua_State *L) {
     auto locker = self->signalEvent_.locker();
     int signals = signalEvent.wait_for(locker,time);
     if(signals & SignalEvent::kQuit || (signals & SignalEvent::kInterrupt)){
-        locker.~unique_lock();
         lua_pushstring(L,"interrupt");
         lua_error(L);
     }
@@ -372,8 +371,6 @@ int LuaInterpreter::lLoadFile(struct lua_State *L) {
         if(r == LUA_OK)
             return 1;
     }
-    providers.~set();
-    code.~basic_string();
     lua_error(L);
     return 0;
 }
@@ -404,8 +401,6 @@ int LuaInterpreter::lLoadResource(struct lua_State *L) {
     }else{
         lua_pushfstring(L,"resource '%s' not found",name);
     }
-    providers.~set();
-    resource.~basic_string();
     lua_error(L);
     return 0;
 }
@@ -486,8 +481,6 @@ int LuaInterpreter::rawRequire(struct lua_State *L) {
             return 1;
         }
     }
-    providers.~set();
-    code.~basic_string();
     lua_error(L);
     return 0;
 }

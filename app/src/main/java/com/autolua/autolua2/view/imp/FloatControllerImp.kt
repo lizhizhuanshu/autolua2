@@ -32,6 +32,7 @@ class FloatControllerImp private constructor() : BroadcastReceiver(),FloatContro
   private var listener: ((state: FloatController.State) -> Unit)? = null
   private var state = FloatController.State.IDLE
   private var displayMetrics = Resources.getSystem().displayMetrics
+  @Volatile
   private var showing = false
 
   companion object{
@@ -116,6 +117,10 @@ class FloatControllerImp private constructor() : BroadcastReceiver(),FloatContro
     }
   }
 
+  override fun isShowing(): Boolean {
+    return showing
+  }
+
   override fun show() {
     CoroutineScope(Dispatchers.Main).launch {
       if(!showing){
@@ -148,7 +153,7 @@ class FloatControllerImp private constructor() : BroadcastReceiver(),FloatContro
     }
   }
 
-  override fun move(x: Int, y: Int) {
+  override fun setPosition(x: Int, y: Int) {
     CoroutineScope(Dispatchers.Main).launch {
       layoutParams.x = x
       layoutParams.y = y

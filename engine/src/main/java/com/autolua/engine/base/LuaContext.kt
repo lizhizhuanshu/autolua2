@@ -19,6 +19,7 @@ interface LuaContext {
   @Throws(LuaTypeError::class)
   fun toBytes(index: Int): ByteArray?
   fun toBoolean(index: Int): Boolean
+  fun toValue(index:Int,valueClass:Class<*>):Any?
 
   fun toLuaObjectAdapter(index: Int): LuaObjectAdapter?
 
@@ -29,9 +30,12 @@ interface LuaContext {
   fun push(v: Boolean)
 
   fun push(v: LuaObjectAdapter?)
+  fun push(v:Function<*>)
 
   fun pushNil()
   fun pushValue(index: Int)
+  fun pushValue(value: Any?, valueClass: Class<*>)
+  fun pushTable(value:Any)
 
   fun getTable(tableIndex: Int): Int
   fun setTable(tableIndex: Int)

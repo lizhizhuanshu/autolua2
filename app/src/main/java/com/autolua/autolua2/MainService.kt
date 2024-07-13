@@ -12,6 +12,9 @@ import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import androidx.core.app.NotificationCompat
 import com.autolua.autolua2.base.Constants
+import com.autolua.autolua2.project.ProjectManagerImp
+import com.autolua.engine.core.AutoLuaEngine
+import com.autolua.engine.core.AutoLuaEngineProxy
 
 class MainService : Service() {
 
@@ -22,7 +25,7 @@ class MainService : Service() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       val notificationChannel = NotificationChannel(
         Constants.FOREGROUND_SERVICE_CHANNEL_ID,
-        resources.getString(R.string.main_notification_channel_name), NotificationManager.IMPORTANCE_HIGH
+        resources.getString(R.string.main_notification_channel_name), NotificationManager.IMPORTANCE_DEFAULT
       )
 
       notificationChannel.enableLights(true)
@@ -36,6 +39,7 @@ class MainService : Service() {
     builder.setContentTitle(resources.getString(R.string.engine_notification_title))
       .setSmallIcon(R.mipmap.ic_launcher_round)
       .setContentText(resources.getString(R.string.engine_notification_content))
+      .setOngoing(true)
       .setWhen(System.currentTimeMillis())
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -55,6 +59,8 @@ class MainService : Service() {
   override fun onDestroy() {
     super.onDestroy()
     wakeLock.release()
+    ProjectManagerImp.instance.stop()
+    AutoLuaEngineProxy.instance.destroy()
   }
 
   override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
@@ -71,7 +77,6 @@ class MainService : Service() {
     override fun unbind() {
       inputMethodService = null
     }
-
   }
 
   private var service = MyAutoLuaEngineService()

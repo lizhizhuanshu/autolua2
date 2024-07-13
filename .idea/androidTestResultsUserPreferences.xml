@@ -16,6 +16,19 @@
             </AndroidTestResultsTableState>
           </value>
         </entry>
+        <entry key="-2096789604">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="Tests" value="360" />
+                  <entry key="nubia NX563J" value="120" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
         <entry key="-1858184150">
           <value>
             <AndroidTestResultsTableState>
@@ -35,6 +48,20 @@
               <option name="preferredColumnWidths">
                 <map>
                   <entry key="Duration" value="90" />
+                  <entry key="Tests" value="360" />
+                  <entry key="nubia NX563J" value="120" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
+        <entry key="-1356485730">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="Pixel_5_Edited_API_29" value="120" />
                   <entry key="Tests" value="360" />
                   <entry key="nubia NX563J" value="120" />
                 </map>
@@ -100,6 +127,7 @@
               <option name="preferredColumnWidths">
                 <map>
                   <entry key="Duration" value="90" />
+                  <entry key="Pixel_5_Edited_API_29" value="120" />
                   <entry key="Tests" value="360" />
                   <entry key="nubia NX563J" value="120" />
                 </map>
@@ -228,6 +256,19 @@
             </AndroidTestResultsTableState>
           </value>
         </entry>
+        <entry key="885175128">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="Tests" value="360" />
+                  <entry key="nubia NX563J" value="120" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
         <entry key="969027755">
           <value>
             <AndroidTestResultsTableState>
@@ -267,6 +308,32 @@
             </AndroidTestResultsTableState>
           </value>
         </entry>
+        <entry key="1752267126">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="Tests" value="360" />
+                  <entry key="nubia NX563J" value="120" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
+        <entry key="1817720239">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="Tests" value="360" />
+                  <entry key="nubia NX563J" value="120" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
         <entry key="1878152743">
           <value>
             <AndroidTestResultsTableState>
@@ -289,6 +356,19 @@
                   <entry key="Duration" value="196" />
                   <entry key="Pixel_5_Edited_API_29" value="226" />
                   <entry key="Tests" value="466" />
+                  <entry key="nubia NX563J" value="120" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
+        <entry key="1965351421">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="Tests" value="360" />
                   <entry key="nubia NX563J" value="120" />
                 </map>
               </option>

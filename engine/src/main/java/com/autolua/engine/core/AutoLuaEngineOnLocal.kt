@@ -1,6 +1,8 @@
 package com.autolua.engine.core
 
-import android.util.Log
+
+import android.view.KeyEvent
+import android.view.WindowManager
 import androidx.collection.LongSparseArray
 import com.autolua.engine.base.JavaObjectWrapper
 import com.autolua.engine.base.LuaContext
@@ -12,7 +14,13 @@ import com.autolua.engine.common.Observable
 import com.autolua.engine.common.ObservableImp
 import com.autolua.engine.core.AutoLuaEngine.*
 import com.autolua.engine.extension.display.Display
-import com.autolua.engine.extension.display.DisplayImplement
+import com.autolua.engine.extension.display.EmptyDisplay
+import com.autolua.engine.extension.input.EmptyInputManager
+import com.autolua.engine.extension.input.InputManager
+import com.autolua.engine.extension.node.UiAutomator
+import com.autolua.engine.extension.node.UiSelector
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.javaType
 
 
 /**
@@ -23,23 +31,33 @@ import com.autolua.engine.extension.display.DisplayImplement
  * 4. push remote services proxy
  */
 class AutoLuaEngineOnLocal (private val codeProvider: com.autolua.engine.core.composite.CodeProvider = com.autolua.engine.core.composite.CodeProvider(),
-                            private val resourceProvider: com.autolua.engine.core.composite.ResourceProvider = com.autolua.engine.core.composite.ResourceProvider())
-  : AutoLuaEngine,AutoCloseable,CodeProvider by codeProvider,
-                          ResourceProvider by resourceProvider,
-  Observable<State> by ObservableImp() {
+                            private val resourceProvider: com.autolua.engine.core.composite.ResourceProvider = com.autolua.engine.core.composite.ResourceProvider(),
+  private val environment: List<Environment<*>> = listOf(),
+  private val localServices: List<LocalService<*>> = listOf(),
+  private val remoteServices: List<RemoteServerConfigure> = listOf(),
+  display:Display = EmptyDisplay(),
+  inputManager: InputManager = EmptyInputManager(),
+  isRoot:Boolean = false,
+  private val uiAutomator: UiAutomator? = null)
+  : AutoLuaEngine,CodeProvider by codeProvider,
+    ResourceProvider by resourceProvider,
+    Observable<State> by ObservableImp()
+{
 
   private val messageObserver = com.autolua.engine.core.composite.MessageObserver()
   private var nativePtr:Long
-  private val display:Display = DisplayImplement()
   /***
    *  engine 相关的方法
    */
 
-  private external fun createNative(display:Display):Long
+  private external fun createNative(display:Display,inputManager: InputManager,isRoot:Boolean):Long
   private external fun releaseNative(ptr:Long)
   private external fun getState(ptr:Long,target:Int):Int
   init {
-    nativePtr = createNative(display)
+    nativePtr = createNative(display,inputManager,isRoot)
+    for (remoteService in remoteServices){
+      addRemoteServiceNative(nativePtr,remoteService)
+    }
   }
   companion object {
     init {
@@ -60,7 +78,7 @@ class AutoLuaEngineOnLocal (private val codeProvider: com.autolua.engine.core.co
 //    }
   }
   private fun onStateChanged(state:Int,target:Int){
-    Log.d(TAG,"onStateChanged  ${AutoLuaEngine.Target.fromInt(target)}  ${State.fromInt(state)}")
+    com.autolua.engine.common.Utils.log(TAG,"onStateChanged  ${AutoLuaEngine.Target.fromInt(target)}  ${State.fromInt(state)}")
     notifyObservers(State.fromInt(state),target)
   }
   private external fun start(ptr:Long):Int
@@ -85,7 +103,11 @@ class AutoLuaEngineOnLocal (private val codeProvider: com.autolua.engine.core.co
     waitForStop(nativePtr)
   }
 
-  override fun close() {
+  override fun getState(target:AutoLuaEngine.Target): State {
+    return State.fromInt(getState(nativePtr, target.value))
+  }
+
+  override fun destroy() {
     synchronized(this){
       if(nativePtr == 0L)
         return
@@ -95,16 +117,6 @@ class AutoLuaEngineOnLocal (private val codeProvider: com.autolua.engine.core.co
     }
   }
 
-  override fun getState(target:AutoLuaEngine.Target): State {
-    return State.fromInt(getState(nativePtr, target.value))
-  }
-
-  override fun attach(messageObserver: MessageObserver) {
-    this.messageObserver.attach(messageObserver)
-  }
-  override fun detach(messageObserver: MessageObserver) {
-    this.messageObserver.detach(messageObserver)
-  }
   private fun onWarning(message:String){
     messageObserver.onWarning(message)
   }
@@ -121,49 +133,7 @@ class AutoLuaEngineOnLocal (private val codeProvider: com.autolua.engine.core.co
    * lua 环境配置
    */
   private external fun addRemoteServiceNative(ptr:Long,remoteServerConfigure:RemoteServerConfigure)
-  override fun addRemoteService(remoteServerConfigure: RemoteServerConfigure) {
-    addRemoteServiceNative(nativePtr,remoteServerConfigure)
-  }
   private external fun removeRemoteServiceNative(ptr:Long,name:String)
-  override fun removeRemoteService(name: String) {
-    removeRemoteServiceNative(nativePtr,name)
-  }
-  private val environment = mutableListOf<Environment<*>>()
-  override fun setEnvironment(environment: List<Environment<*>>) {
-    synchronized(environment){
-      this.environment.clear()
-      this.environment.addAll(environment)
-    }
-  }
-  private val localServices = mutableListOf<LocalService<*>>()
-  override fun setLocalServices(services: List<LocalService<*>>) {
-    synchronized(localServices){
-      this.localServices.clear()
-      this.localServices.addAll(services)
-    }
-  }
-  override fun addCodeProvider(codeProvider: CodeProvider) {
-    this.codeProvider.addProvider(codeProvider)
-  }
-
-  override fun clearCodeProvider() {
-    this.codeProvider.clear()
-  }
-
-  override fun removeCodeProvider(codeProvider: CodeProvider) {
-    this.codeProvider.removeProvider(codeProvider)
-  }
-  override fun addResourceProvider(resourceProvider: ResourceProvider) {
-    this.resourceProvider.addProvider(resourceProvider)
-  }
-
-  override fun clearResourceProvider() {
-    this.resourceProvider.clear()
-  }
-
-  override fun removeResourceProvider(resourceProvider:ResourceProvider) {
-    this.resourceProvider.removeProvider(resourceProvider)
-  }
 
   /**
    * push environment to lua context
@@ -250,12 +220,57 @@ class AutoLuaEngineOnLocal (private val codeProvider: com.autolua.engine.core.co
   private val objectCache = ObjectCacheImp()
   private val contextCache = LongSparseArray<LuaContext>()
   private fun newLuaContext():Long{
+    try{
+      return rawNewLuaContext()
+    }catch (e:Exception){
+      com.autolua.engine.common.Utils.log(TAG,"Failed to create lua context $e")
+      return 0
+    }
+  }
+  private object KeyCode {
+    val HOME = KeyEvent.KEYCODE_HOME
+    val BACK = KeyEvent.KEYCODE_BACK
+    val MENU = KeyEvent.KEYCODE_MENU
+    val VOLUME_UP = KeyEvent.KEYCODE_VOLUME_UP
+    val VOLUME_DOWN = KeyEvent.KEYCODE_VOLUME_DOWN
+    val POWER = KeyEvent.KEYCODE_POWER
+  }
+
+  private object LayoutParamsFlag {
+    val NOT_FOCUSABLE = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+    val NOT_TOUCHABLE = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+    val NOT_TOUCH_MODAL = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+  }
+
+  private fun rawNewLuaContext():Long{
     val luaContext = LuaContextImplement(objectCache)
     contextCache.put(luaContext.getNativeLua() ,luaContext)
     pushEnvironment(luaContext)
     pushLocalServices(luaContext)
+    if(uiAutomator != null){
+      luaContext.push {
+        UiSelector()
+      }
+      luaContext.setGlobal("UiSelector")
+      luaContext.push {
+        uiAutomator.getRootInActiveWindow()
+      }
+      luaContext.setGlobal("getRootInActiveWindow")
+
+      luaContext.push{it:String->
+        uiAutomator.setText(it)
+      }
+      luaContext.setGlobal("setText")
+    }
+    luaContext.pushTable(KeyCode)
+    luaContext.setGlobal("KeyCode")
+    luaContext.pushTable(LayoutParamsFlag)
+    luaContext.setGlobal("LayoutParamsFlag")
+
+
     return luaContext.getNativeLua()
   }
+
   private fun releaseContext(ptr:Long){
     val l = contextCache.get(ptr)
     if(l != null){
@@ -300,5 +315,90 @@ class AutoLuaEngineOnLocal (private val codeProvider: com.autolua.engine.core.co
   private external fun stopDebugService(ptr:Long)
   override fun stopDebugger() {
     stopDebugService(nativePtr)
+  }
+
+  class Builder :AutoLuaEngine.Builder{
+    private val remoteServices = mutableListOf<RemoteServerConfigure>()
+    override fun addRemoteService(remoteServerConfigure: RemoteServerConfigure): AutoLuaEngine.Builder {
+      remoteServices.add(remoteServerConfigure)
+      return this
+    }
+
+    private val localServices = mutableListOf<LocalService<*>>()
+    override fun addLocalService(localService: LocalService<*>): AutoLuaEngine.Builder {
+      localServices.add(localService)
+      return this
+    }
+
+    override fun addLocalService(
+      name: String,
+      service: Any,
+      thisInterface: Class<*>
+    ): AutoLuaEngine.Builder {
+      localServices.add(LocalService(name,service,thisInterface))
+      return this
+    }
+
+    override fun addLocalService(
+      name: String,
+      serviceClass: Class<*>,
+      thisInterface: Class<*>
+    ): AutoLuaEngine.Builder {
+      val localService = LocalService<Any>(name, LocalService.Type.CLASS)
+      localService.mClass = serviceClass as Class<Any>
+      localServices.add(localService)
+      return this
+    }
+
+    private val environment = mutableListOf<Environment<*>>()
+    override fun addEnvironment(key: String, value: Any): AutoLuaEngine.Builder {
+      environment.add(Environment(key,value))
+      return this
+    }
+
+    private val codeProvider = com.autolua.engine.core.composite.CodeProvider()
+    override fun addCodeProvider(codeProvider: CodeProvider): AutoLuaEngine.Builder {
+      this.codeProvider.addProvider(codeProvider)
+      return this
+    }
+
+    private val resourceProvider = com.autolua.engine.core.composite.ResourceProvider()
+    override fun addResourceProvider(resourceProvider: ResourceProvider): AutoLuaEngine.Builder {
+      this.resourceProvider.addProvider(resourceProvider)
+      return this
+    }
+
+    private var display: Display? = null
+    override fun setDisplay(display: Display): AutoLuaEngine.Builder {
+      this.display = display
+      return this
+    }
+
+    private var inputManager: InputManager? = null
+    override fun setInputManager(inputManager: InputManager): AutoLuaEngine.Builder {
+      this.inputManager = inputManager
+      return this
+    }
+    private var uiAutomator: UiAutomator? = null
+    override fun setUiAutomator(uiAutomator: UiAutomator): AutoLuaEngine.Builder {
+      this.uiAutomator = uiAutomator
+      return this
+    }
+
+    private var isRoot = false
+    override fun isRoot(isRoot: Boolean): AutoLuaEngine.Builder {
+      this.isRoot = isRoot
+      return this
+    }
+
+    override fun build(): AutoLuaEngine {
+      return AutoLuaEngineOnLocal(codeProvider,resourceProvider,
+        environment,localServices,
+        remoteServices,
+        display ?: EmptyDisplay(),
+        inputManager ?: EmptyInputManager(),
+        isRoot,uiAutomator)
+    }
+
   }
 }

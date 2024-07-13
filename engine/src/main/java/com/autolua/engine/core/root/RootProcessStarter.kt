@@ -26,8 +26,9 @@ class RootProcessStarter {
     return this
   }
 
-  fun setStartClass(clazz: Class<*>){
+  fun setStartClass(clazz: Class<*>): RootProcessStarter{
     targetClassName = clazz.name
+    return this
   }
 
   private fun getLibraryRootPath():String {

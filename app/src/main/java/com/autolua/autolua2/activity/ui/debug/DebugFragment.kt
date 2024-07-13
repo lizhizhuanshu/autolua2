@@ -67,8 +67,11 @@ class DebugFragment: Fragment(){
 
   override fun onDestroy() {
     super.onDestroy()
-    debugService?.removeObserver(debugServiceObserver)
-    requireContext().unbindService(serviceConnection)
+    val service = debugService
+    if (service!= null){
+      service.removeObserver(debugServiceObserver)
+      requireContext().unbindService(serviceConnection)
+    }
   }
 
   private fun startDebugService(service:DebugService){

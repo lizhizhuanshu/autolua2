@@ -13,6 +13,7 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.autolua.autolua2.base.Configure
 import com.autolua.autolua2.base.Path
+import com.autolua.autolua2.extension.FloatView
 import com.autolua.autolua2.extension.UserInterface
 import com.google.gson.Gson
 import com.google.gson.JsonNull
@@ -36,9 +37,7 @@ import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaType
 
-class UserInterfaceImp(): UserInterface {
-  private val floatViews:LongSparseArray<FloatView> = LongSparseArray()
-  private var floatViewId:Long = 0
+class UserInterfaceImp (): UserInterface {
   private lateinit var windowManager:WindowManager
   private lateinit var context: Context
   @SuppressLint("StaticFieldLeak")
@@ -58,150 +57,14 @@ class UserInterfaceImp(): UserInterface {
     }
   }
 
-  private fun newID():Long{
-    while (true){
-      floatViewId++
-      if( floatViewId != 0L && floatViews[floatViewId] == null){
-        return floatViewId
-      }
+
+  override fun createView(uri: String, params:WindowManager.LayoutParams): FloatView? {
+    val floatView = FloatViewImp(windowManager,context,params)
+    if(!floatView.init(uri)){
+      return null
     }
+    return floatView
   }
-
-  override fun createFloatView(uri: String, params:WindowManager.LayoutParams): Long {
-    val nUri = Path.ui(uri)
-    val deferred = CoroutineScope(Dispatchers.Main).async {
-      val instance = MLSInstance(context,false,false)
-      val layout = FrameLayout(context)
-      val initData = InitData(nUri)
-      if(nUri.startsWith("http://127.0.0.1")){
-        initData.loadType = Constants.LT_FORCE_DOWNLOAD
-      }
-      instance.setContainer(layout)
-      instance.setData(initData)
-      Log.d("UserInterfaceImp","createFloatView uri:$nUri")
-      if(!instance.isValid)
-        return@async 0L
-
-      if(Build.VERSION.SDK_INT >=Build.VERSION_CODES.O){
-        params.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-      }else{
-        params.type = WindowManager.LayoutParams.TYPE_PHONE
-      }
-      params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-      params.format = PixelFormat.RGBA_8888
-      val id = newID()
-      val floatView = FloatView(id,nUri,instance,layout, params)
-      floatViews.put(id,floatView)
-      id
-    }
-    val r = runBlocking {
-      deferred.await()
-    }
-    Log.d("UserInterfaceImp","createFloatView id:$r")
-    return r
-  }
-
-  override fun releaseFloatView(id: Long) {
-    CoroutineScope(Dispatchers.Main).launch {
-      val floatView = floatViews[id]?:return@launch
-      if(floatView.showing){
-        windowManager.removeView(floatView.layout)
-      }
-      floatView.instance.onDestroy()
-      floatViews.remove(id)
-    }
-  }
-
-  override fun showFloatView(id: Long) {
-    CoroutineScope(Dispatchers.Main).launch {
-      val floatView = floatViews[id]?:return@launch
-      if(floatView.showing){
-        return@launch
-      }
-
-      Log.d("UserInterfaceImp","showFloatView id:$id")
-      windowManager.addView(floatView.layout,floatView.params)
-      floatView.showing = true
-    }
-  }
-
-  override fun hideFloatView(id: Long) {
-    CoroutineScope(Dispatchers.Main).launch {
-      val floatView = floatViews[id]?:return@launch
-      if(!floatView.showing){
-        return@launch
-      }
-      windowManager.removeView(floatView.layout)
-      floatView.showing = false
-    }
-  }
-
-  override fun destroyFloatView(id: Long) {
-    CoroutineScope(Dispatchers.Main).launch {
-      val floatView = floatViews[id]?:return@launch
-      if(floatView.showing){
-        windowManager.removeView(floatView.layout)
-      }
-      floatView.instance.onDestroy()
-      floatViews.remove(id)
-    }
-  }
-
-  override fun setFloatViewPosition(id: Long, x: Int, y: Int) {
-    CoroutineScope(Dispatchers.Main).launch {
-      val floatView = floatViews[id]?:return@launch
-      floatView.params.x = x
-      floatView.params.y = y
-      if(floatView.showing){
-        windowManager.updateViewLayout(floatView.layout,floatView.params)
-      }
-    }
-  }
-
-  override fun setFloatViewSize(id: Long, width: Int, height: Int) {
-    CoroutineScope(Dispatchers.Main).launch {
-      val floatView = floatViews[id]?:return@launch
-      floatView.params.width = width
-      floatView.params.height = height
-      if(floatView.showing){
-        windowManager.updateViewLayout(floatView.layout,floatView.params)
-      }
-    }
-  }
-
-  private fun <T : Any> updateObjectFromJson(obj: T, json: String) {
-    val gson = Gson()
-    val jsonObject = JsonParser.parseString(json).asJsonObject
-    val kClass = obj::class
-    for (property in kClass.declaredMemberProperties) {
-      property.isAccessible = true
-      val jsonElement = jsonObject.get(property.name)
-      if (jsonElement != null && jsonElement != JsonNull.INSTANCE) {
-        if(property is KMutableProperty<*>){
-          property.setter.call(obj,gson.fromJson(jsonElement,property.returnType.javaType))
-        }
-      }
-    }
-  }
-
-  override fun setFloatViewContent(id: Long, uri: String) {
-    val nUri = Path.ui(uri)
-    CoroutineScope(Dispatchers.Main).launch {
-      val floatView = floatViews[id]?:return@launch
-      floatView.instance.setData(InitData(nUri))
-    }
-  }
-
-  override fun changeFloatViewParams(id: Long, params: String) {
-    CoroutineScope(Dispatchers.Main).launch {
-      val floatView = floatViews[id]?:return@launch
-      updateObjectFromJson(floatView.params,params)
-      if(floatView.showing){
-        windowManager.updateViewLayout(floatView.layout,floatView.params)
-      }
-    }
-  }
-
 
   private val signals = ConcurrentHashMap <String,LinkedBlockingQueue<Any>>()
 
@@ -240,24 +103,8 @@ class UserInterfaceImp(): UserInterface {
   }
 
   override fun onRelease() {
-    CoroutineScope(Dispatchers.Main).launch {
-      for (i in 0 until floatViews.size()){
-        val floatView = floatViews.valueAt(i)
-        if(floatView.showing){
-          windowManager.removeView(floatView.layout)
-        }
-        floatView.instance.onDestroy()
-      }
-      floatViews.clear()
-    }
+    signals.clear()
   }
 
-  data class FloatView(val id:Long,
-                       val uri:String,
-                       val instance:MLSInstance,
-                        val layout:FrameLayout,
-                       val params:WindowManager.LayoutParams){
-    var showing = false
-  }
 
 }

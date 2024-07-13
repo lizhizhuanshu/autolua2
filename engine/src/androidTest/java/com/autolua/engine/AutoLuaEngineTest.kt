@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 @RunWith(AndroidJUnit4::class)
 class AutoLuaEngineTest {
 
-  private fun AutoLuaEngineOnLocal.syncExecute(code:String ){
+  private fun AutoLuaEngine.syncExecute(code:String ){
     val semaphore = Semaphore(1)
     semaphore.acquire()
     val observer = object: Observer<AutoLuaEngine.State> {
@@ -136,7 +136,7 @@ class AutoLuaEngineTest {
       Log.e("AutoLuaEngineTest","state:   $it")
     }
     engine.syncExecute("local a = 1")
-    engine.close()
+    engine.destroy()
 
     assertEquals(true,running.get())
   }
@@ -162,14 +162,10 @@ class AutoLuaEngineTest {
 
   @Test
   fun localService(){
-    val engine = AutoLuaEngineOnLocal()
-    val services = mutableListOf<AutoLuaEngine.LocalService<*>>()
-    val service = AutoLuaEngine.LocalService<Person>("person")
     val person = Person()
-    service.service = person
-    service.mInterface = Person::class.java
-    services.add(service)
-    engine.setLocalServices(services)
+    val builder = AutoLuaEngineOnLocal.Builder()
+    builder.addLocalService("person",person,Person::class.java)
+    val engine = builder.build()
     engine.start()
     engine.syncExecute("person:setName('zhangsan')")
     assertEquals("zhangsan",person.getName())
@@ -179,19 +175,13 @@ class AutoLuaEngineTest {
 
   @Test
   fun environment(){
-    val engine = AutoLuaEngineOnLocal()
-    val environment = mutableListOf<AutoLuaEngine.Environment<*>>()
-    environment.add(AutoLuaEngine.Environment("name","zhangsan"))
-    environment.add(AutoLuaEngine.Environment("age",20))
-    engine.setEnvironment(environment)
-    engine.start()
+    val builder = AutoLuaEngineOnLocal.Builder()
+    builder.addEnvironment("name","zhangsan")
+    builder.addEnvironment("age",20)
     val person = Person()
-    val services = mutableListOf<AutoLuaEngine.LocalService<*>>()
-    val service = AutoLuaEngine.LocalService<Person>("person")
-    service.service = person
-    service.mInterface = Person::class.java
-    services.add(service)
-    engine.setLocalServices(services)
+    builder.addLocalService("person",person,Person::class.java)
+    val engine = builder.build()!!
+    engine.start()
     engine.syncExecute("person:setName(name)")
     assertEquals("zhangsan",person.getName())
     engine.syncExecute("person:setAge(age)")
@@ -200,7 +190,7 @@ class AutoLuaEngineTest {
 
   @Test
   fun codeProvider(){
-    val engine = AutoLuaEngineOnLocal()
+    val builder = AutoLuaEngineOnLocal.Builder()
     val code = """
       local M = {}
       function M.add(a,b)
@@ -224,15 +214,11 @@ class AutoLuaEngineTest {
         return null
       }
     }
-    engine.addCodeProvider(codeProvider)
-    engine.start()
+    builder.addCodeProvider(codeProvider)
     val person = Person()
-    val services = mutableListOf<AutoLuaEngine.LocalService<*>>()
-    val service = AutoLuaEngine.LocalService<Person>("person")
-    service.service = person
-    service.mInterface = Person::class.java
-    services.add(service)
-    engine.setLocalServices(services)
+    builder.addLocalService("person",person,Person::class.java)
+    val engine = builder.build()!!
+    engine.start()
     val eCode = """
       local obj = require('test')
       person:setAge(obj.add(1,3))
@@ -251,7 +237,7 @@ class AutoLuaEngineTest {
 
   @Test
   fun resourceProvider(){
-    val engine = AutoLuaEngineOnLocal()
+    val builder = AutoLuaEngineOnLocal.Builder()
     val resourceProvider = object: AutoLuaEngine.ResourceProvider {
       override fun getResource(url: String): ByteArray? {
         if(url == "test")
@@ -259,15 +245,11 @@ class AutoLuaEngineTest {
         return null
       }
     }
-    engine.addResourceProvider(resourceProvider)
-    engine.start()
+    builder.addResourceProvider(resourceProvider)
     val person = Person()
-    val services = mutableListOf<AutoLuaEngine.LocalService<*>>()
-    val service = AutoLuaEngine.LocalService<Person>("person")
-    service.service = person
-    service.mInterface = Person::class.java
-    services.add(service)
-    engine.setLocalServices(services)
+    builder.addLocalService("person",person,Person::class.java)
+    val engine = builder.build()!!
+    engine.start()
     val eCode = """
       local name = loadresource('test')
       person:setName(name)

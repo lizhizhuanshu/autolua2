@@ -1,7 +1,7 @@
 package com.autolua.autolua2.debug
 
 import android.util.Log
-import com.autolua.autolua2.base.DataCallbackManager
+import com.autolua.engine.core.root.DataCallbackManager
 import com.autolua.engine.common.Observable
 import com.autolua.engine.common.ObservableImp
 import io.netty.bootstrap.ServerBootstrap
@@ -441,7 +441,8 @@ class DebugServerImp(private var group: EventLoopGroup ): DebugServer,
     handleUIDebugKitMessage = handler
   }
 
-  private val dataCallbackManager = DataCallbackManager()
+  private val dataCallbackManager =
+    DataCallbackManager<ByteArray>()
 
   private fun sendGetRequestRequest(id:Int,type:RequestResource.ResourceType, path:String,ctx:ChannelHandlerContext){
     val request = GetResourceRequest.newBuilder()

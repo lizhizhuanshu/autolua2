@@ -7,6 +7,7 @@ plugins {
   alias(libs.plugins.android.library)
   alias(libs.plugins.jetbrains.kotlin.android)
   id("de.undercouch.download") version "4.1.2"
+  id("kotlin-parcelize")
 }
 
 val osName = System.getProperty("os.name").lowercase(Locale.getDefault())
@@ -160,10 +161,12 @@ dependencies {
   implementation(libs.material)
   implementation(libs.gson)
   implementation(libs.protobuf.javalite)
-
+  implementation(libs.androidx.uiautomator)
+  implementation (libs.kotlin.reflect)
   testImplementation(libs.junit)
   androidTestImplementation(libs.androidx.junit)
   androidTestImplementation(libs.androidx.espresso.core)
+  implementation(kotlin("reflect"))
 }
 
 

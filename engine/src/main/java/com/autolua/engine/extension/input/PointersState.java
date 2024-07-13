@@ -69,10 +69,10 @@ public class PointersState {
             Point point = pointer.getPoint();
             coords[i].x = point.x;
             coords[i].y = point.y;
-            coords[i].pressure = pointer.getPressure();
-            coords[i].touchMajor = pointer.getMajor();
-            coords[i].touchMinor = pointer.getMinor();
-            coords[i].size = pointer.getSize();
+            if (pointer.getPressure()>0) coords[i].pressure = pointer.getPressure();
+            if (pointer.getMajor()>0) coords[i].touchMajor = pointer.getMajor();
+            if (pointer.getMinor()>0) coords[i].touchMinor = pointer.getMinor();
+            if (pointer.getSize()>0) coords[i].size = pointer.getSize();
         }
         cleanUp();
         return count;

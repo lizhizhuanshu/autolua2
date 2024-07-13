@@ -10,30 +10,31 @@
 #include <set>
 #include <cJSON.h>
 #include <atomic>
-
+#include <thread>
 
 #include "core/LuaInterpreter.h"
 #include <hv/EventLoop.h>
 #include "remote/ServiceManager.h"
 #include "DebugService.h"
 #include "FatherService.h"
-#include "Input.h"
+#include "InputManager.h"
+#include "Display.h"
 
 class AutoLuaEngineService {
 public:
-    AutoLuaEngineService(JNIEnv*env, jobject obj,jobject display);
+    AutoLuaEngineService(JNIEnv*env, jobject obj,jobject display,jobject inputManager,bool isRoot);
     ~AutoLuaEngineService();
     int execute(const char*code,int32_t len,int codeType,int flags);
     void startFatherService(const RemoteServerInfo& info);
     void interrupt();
     void setRootDir(const char*dir);
     int start();
-    void stop(bool wait_for_stop=false);
+    void stop();
     void waitForStop();
     void destroy();
-    bool addService(const RemoteServerInfo info);
+    bool addService(RemoteServerInfo info);
     void removeService(const std::string &name);
-    void startDebugService(const RemoteServerInfo info);
+    void startDebugService(RemoteServerInfo info);
     void stopDebugService();
     enum class Target:int {
         kEngine = 0,
@@ -44,7 +45,6 @@ public:
     int getState(Target target);
 private:
     void onRun();
-    void rawRun();
     void notifyStateChanged(ALEState state);
 
 
@@ -56,8 +56,10 @@ private:
     std::atomic_bool running_;
     std::condition_variable condVal_;
     std::mutex mutex_;
+    std::thread thread_;
 
-    std::shared_ptr<autolua::Input> input_;
+    Display display_;
+    autolua::InputManager inputManager_;
 
     std::shared_ptr<hv::EventLoop> eventLoop_;
     std::shared_ptr<LuaInterpreter> interpreter_;
@@ -71,9 +73,10 @@ private:
     std::shared_ptr<LuaInterpreter::ResourceProvider> localResourceProvider_;
 
 
+
     jclass clazz;
     jobject thiz;
-    jobject display_;
+
     jmethodID newLuaContextMethodID;
     jmethodID releaseContextMethodID;
     jmethodID getModuleMethodID;

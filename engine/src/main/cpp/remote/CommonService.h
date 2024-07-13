@@ -53,11 +53,13 @@ protected:
     void putCallback(uint32_t id,Callback callback);
     void clearCallback(uint32_t id);
     virtual bool isRunning()=0;
+    virtual int onErrorCall(struct lua_State*L);
 private:
+
     void ensurePushServiceMetatable(struct lua_State*L);
     class ServiceInLua:private ServiceInfo {
     public:
-        ServiceInLua(const ServiceInfo info,std::shared_ptr<CommonService> ptr);
+        ServiceInLua(ServiceInfo info,std::shared_ptr<CommonService> ptr);
         static int index(struct lua_State*L);
         static int call(struct lua_State*L);
     private:

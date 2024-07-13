@@ -1,7 +1,8 @@
 [versions]
-agp = "8.4.0"
+agp = "8.5.0"
 androidsvg = "1.4"
 autoCommon = "1.2"
+autoService = "1.0.1"
 gson = "2.10.1"
 javapoet = "1.13.0"
 kotlin = "1.9.0"
@@ -10,6 +11,7 @@ junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
 appcompat = "1.6.1"
+kotlinpoet = "1.12.0"
 kotlinReflect = "1.9.20"
 kotlinxCoroutinesAndroid = "1.7.1"
 material = "1.10.0"
@@ -26,13 +28,17 @@ lifecycleViewmodelKtx = "2.6.1"
 firebaseCrashlyticsBuildtools = "3.0.0"
 baselibrary = "3.2.0-alpha11"
 swiperefreshlayout = "1.1.0"
+jetbrainsKotlinJvm = "1.9.0"
+uiautomator = "2.3.0"
 
 [libraries]
 androidsvg = { module = "com.caverock:androidsvg", version.ref = "androidsvg" }
 androidx-core = { group = "androidx.core", name = "core", version.ref = "coreKtx" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-swiperefreshlayout = { module = "androidx.swiperefreshlayout:swiperefreshlayout", version.ref = "swiperefreshlayout" }
+androidx-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
 auto-common = { module = "com.google.auto:auto-common", version.ref = "autoCommon" }
+auto-service = { module = "com.google.auto.service:auto-service", version.ref = "autoService" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 javapoet = { module = "com.squareup:javapoet", version.ref = "javapoet" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -40,6 +46,7 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlinReflect" }
+kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
@@ -61,3 +68,4 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
+jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }

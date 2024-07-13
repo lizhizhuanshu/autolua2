@@ -6,22 +6,21 @@
 #define AUTOLUA2_DISPLAY_H
 #include "jni.h"
 #include "functional"
-
+#include <shared_mutex>
 #include "Bitmap.h"
+#include <lua.hpp>
 
-struct lua_State;
+
 class Display : public autolua::Bitmap{
     jobject obj_;
     bool keepDisplay_;
 public:
-    static void initializeJavaDisplayClass(JNIEnv*env);
-    static void releaseJavaDisplayClass(JNIEnv*env);
-    static void pushObjectToLua(lua_State*L,jobject obj);
-    Display(jobject obj);
+    explicit Display(jobject obj);
+    void injectToLua(lua_State*L);
     ~Display();
     void update();
 
-    bool isKeepDisplay(){
+    bool isKeepDisplay() const{
         return keepDisplay_;
     }
     void keepDisplay(){
@@ -29,7 +28,7 @@ public:
     }
     bool isChangeDirection();
     int getRotation();
-    bool getBaseSize(int&w,int&h){
+    bool getScreenBaseSize(int&w, int&h) const{
         w = baseWidth_;
         h = baseHeight_;
         return true;
@@ -42,6 +41,8 @@ public:
 private:
     int _screenshot(int x,int y,int x1,int y1,SCREEN_SHOT_FORMAT format,std::vector<unsigned  char> &out);
     int screenshotToPng(int x,int y,int x1,int y1,std::vector<unsigned  char> &out);
+    static int transitMethod(lua_State*L);
+    static void compareColorWrapper(const char* name, lua_CFunction method, void *data);
     inline bool localReset(int w,int h);
     static int getBaseSize(lua_State*L);
 
@@ -58,21 +59,20 @@ private:
     jint baseHeight_;
     jint baseDensity_;
     jint baseDirection_;
+    std::shared_mutex mutex_;
 
-    static jclass displayClassID_;
-
-
-    static jmethodID getRotationMethodID;
+    jclass displayClassID_;
 
 
-    static jmethodID initializeMethodID;
-    static jmethodID isChangeDirectionMethodID;
-    static jmethodID getDisplayBufferMethodID ;
-    static jmethodID getHeightMethodID;
-    static jmethodID getRowStrideMethodID ;
-    static jmethodID getPixelStrideMethodID;
-    static jmethodID getWidthMethodID;
-    static jmethodID updateMethodID;
+    jmethodID getRotationMethodID;
+    jmethodID initializeMethodID;
+    jmethodID isChangeDirectionMethodID;
+    jmethodID getDisplayBufferMethodID ;
+    jmethodID getHeightMethodID;
+    jmethodID getRowStrideMethodID ;
+    jmethodID getPixelStrideMethodID;
+    jmethodID getWidthMethodID;
+    jmethodID updateMethodID;
 };
 
 

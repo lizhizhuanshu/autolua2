@@ -21,6 +21,11 @@ aux_source_directory(${MY_LUA_DIR}  LUA_DIR)
 list(REMOVE_ITEM LUA_DIR "${MY_LUA_DIR}/lua.c"
         "${MY_LUA_DIR}/luac.c" "${MY_LUA_DIR}/onelua.c")
 add_library(lua_static STATIC ${LUA_DIR})
+set_target_properties(lua_static PROPERTIES
+        LINKER_LANGUAGE CXX
+        COMPILE_FLAGS "-x c++"
+)
+
 
 #compile libhv
 option(BUILD_SHARED "Build shared library" OFF)

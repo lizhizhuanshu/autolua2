@@ -13,7 +13,7 @@ import com.autolua.autolua2.view.FloatController
 import com.autolua.autolua2.view.imp.FloatControllerImp
 import com.autolua.engine.core.AutoLuaEngine
 import com.autolua.engine.core.AutoLuaEngineProxy
-import com.autolua.engine.core.root.Proxy
+import com.autolua.engine.core.root.Client
 import com.immomo.mls.MLSBuilder
 import com.immomo.mls.MLSEngine
 import com.immomo.mls.`fun`.lt.SIApplication
@@ -86,11 +86,10 @@ class MainApp: android.app.Application() {
     }
 
     AutoLuaEngineProxy.instance.setEngineCreator {
-      val engine = Proxy(this@MainApp)
-      engine.setLocalServices(arrayListOf(
-        AutoLuaEngine.LocalService("UI", UserInterfaceImp.instance, UserInterface::class.java)
-      ))
-      engine
+      val builder = Client.Builder(this@MainApp)
+      builder.addLocalService("UI", UserInterfaceImp.instance, UserInterface::class.java)
+      builder.addLocalService("FloatController", FloatControllerImp.instance, FloatController::class.java)
+      builder.build()!!
     }
     AutoLuaEngineProxy.instance.start()
 

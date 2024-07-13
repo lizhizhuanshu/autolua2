@@ -45,7 +45,6 @@ enum ResponseResult {
   kUnknownError = 1;
   kServiceNotFound = 2;
   kMethodNotFound = 3;
-  kOtherError = 4;
 }
 
 enum NotificationSource {
@@ -101,6 +100,7 @@ message RpcRequest {
   int32 bitmap_width = 5;
   int32 bitmap_height = 6;
   bytes data = 7;
+  uint32 service_id = 8;
 }
 
 message RpcResponse {

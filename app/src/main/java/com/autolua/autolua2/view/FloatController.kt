@@ -5,10 +5,11 @@ interface FloatController {
     IDLE,
     RUNNING
   }
+  fun isShowing():Boolean
   fun show()
   fun reShow()
   fun hide()
-  fun move(x: Int, y: Int)
+  fun setPosition(x: Int, y: Int)
   fun updateState(state: State)
   fun setClickListener(listener: (state:State) -> Unit)
 }

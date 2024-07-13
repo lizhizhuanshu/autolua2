@@ -1,15 +1,25 @@
 package com.autolua.engine.base
 
 import android.util.Log
+import com.autolua.engine.common.Utils
 
 
 class JavaObjectWrapper(
   private val aClass: Class<*>,
-  private val obj: Any,
+  val obj: Any,
   private val methodCache: MethodCache
 ) : LuaObjectAdapter {
-  override fun hasMethod(name: String): Boolean {
-    return methodCache.findMethod(aClass, name) != null
+  override fun index(L:LuaContext): Int {
+    val name = L.toString(2)
+    return if(methodCache.findMethod(aClass, name!!) != null) 2 else 0
+  }
+
+  override fun newIndex(L: LuaContext): Int {
+    val name = L.toString(2)
+    val field = aClass.getField(name!!)
+    val value = L.toValue(3, field.type)
+    field.set(obj, value)
+    return 0
   }
 
   companion object {
@@ -25,53 +35,24 @@ class JavaObjectWrapper(
     if (types.isNotEmpty()) {
       args = arrayOfNulls(types.size)
       for (i in types.indices) {
-        val type = types[i]
-        if (type == Int::class.javaPrimitiveType) {
-          args[i] = L.toLong(i + 2).toInt()
-        } else if (type == Long::class.javaPrimitiveType) {
-          args[i] = L.toLong(i + 2)
-        } else if (type == Float::class.javaPrimitiveType) {
-          args[i] = L.toDouble(i + 2).toFloat()
-        } else if (type == Double::class.javaPrimitiveType) {
-          args[i] = L.toDouble(i + 2)
-        } else if (type == String::class.java) {
-          args[i] = L.toString(i + 2)
-        } else if (type == Boolean::class.javaPrimitiveType) {
-          args[i] = L.toBoolean(i + 2)
-        } else if (type == ByteArray::class.java) {
-          args[i] = L.toBytes(i + 2)
-        } else {
-          throw IllegalArgumentException("Unsupported type:$type")
-        }
+        args[i] = L.toValue(i + 2, types[i])
       }
     }
-    val result = method.invoke(obj, *args) ?: return 0
+    val result = method.invoke(obj, *args)
     val resultType = method.returnType
-    if (resultType == Int::class.javaPrimitiveType) {
-      L.push((result as Int).toLong())
-    } else if (resultType == Long::class.javaPrimitiveType) {
-      L.push(result as Long)
-    } else if (resultType == Float::class.javaPrimitiveType) {
-      L.push((result as Float).toDouble())
-    } else if (resultType == Double::class.javaPrimitiveType) {
-      L.push(result as Double)
-    } else if (resultType == Boolean::class.javaPrimitiveType) {
-      L.push(result as Boolean)
-    } else if (resultType == String::class.java) {
-      L.push(result as String)
-    } else if (resultType == ByteArray::class.java) {
-      L.push(result as ByteArray)
-    } else {
-      throw IllegalArgumentException("Unsupported result type:$resultType")
-    }
+    L.pushValue(result, resultType)
     return 1
   }
 
+  override fun invoke(L: LuaContext): Int {
+    TODO("Not yet implemented")
+  }
+
+
   @Throws(Throwable::class)
   override fun release(L: LuaContext) {
-    Log.e("JavaObjectWrapper", "release")
-    if (obj is Releasable) {
-      obj.onRelease()
+    if (Releasable::class.java.isInstance(obj)) {
+      (obj as Releasable).onRelease()
     }
   }
 }

@@ -427,6 +427,17 @@ static int callMethod(lua_State*L){
     return result;
 }
 
+static int invokeMethod(lua_State*L){
+    auto context = toLuaContext(L);
+    auto env = context->env;
+    auto adapter = luaL_checkObject(LuaObjectAdapter,L,1);
+    auto result = env->CallIntMethod(context->lua_context, context->invokeMethod, adapter->id);
+    if(catchAndPushJavaThrowable(env,L)){
+        lua_error(L);
+    }
+    return result;
+}
+
 
 static int indexMethod(lua_State*L){
     auto context = toLuaContext(L);
@@ -434,17 +445,33 @@ static int indexMethod(lua_State*L){
     auto adapter = (LuaObjectAdapter*)lua_touserdata(L,1);
     const char* methodName = lua_tostring(L,2);
     jstring  name = env->NewStringUTF(methodName);
-    auto has = env->CallBooleanMethod(context->lua_context, context->hasMethod, adapter->id, name);
+    auto res = env->CallIntMethod(context->lua_context, context->indexMethod, adapter->id);
     if(catchAndPushJavaThrowable(env,L)){
         env->DeleteLocalRef(name);
         lua_error(L);
     }
     env->DeleteLocalRef(name);
-    if (not has)
+    if(res == 0){
         return 0;
+    }
+    if(res == 1){
+        return 1;
+    }
     lua_pushvalue(L,2);
     lua_pushcclosure(L,callMethod,1);
     return 1;
+}
+
+static int newIndex(lua_State*L){
+    auto context = toLuaContext(L);
+    auto env = context->env;
+    auto adapter = luaL_checkObject(LuaObjectAdapter,L,1);
+    auto res = env->CallIntMethod(context->lua_context, context->newIndexMethod, adapter->id);
+    if(catchAndPushJavaThrowable(env,L)){
+        lua_error(L);
+    }
+    return 0;
+
 }
 
 static int release(lua_State*L){
@@ -466,11 +493,14 @@ Java_com_autolua_engine_base_LuaContextImplement_createLuaContext(JNIEnv *env, j
     auto context = new LuaContext();
     context->env = env;
     context->lua_context = env->NewWeakGlobalRef(thiz);
-    context->lua_context_class = (jclass)env->NewWeakGlobalRef(env->GetObjectClass(thiz));
-    context->hasMethod = env->GetMethodID(context->lua_context_class,"hasMethod","(JLjava/lang/String;)Z");
-    context->callMethod = env->GetMethodID(context->lua_context_class,"callMethod","(JLjava/lang/String;)I");
-    context->releaseMethod = env->GetMethodID(context->lua_context_class,"release","(J)V");
-    context->ptr = env->GetFieldID(context->lua_context_class,"nativeLua","J");
+    auto clazz = env->FindClass("com/autolua/engine/base/LuaContextImplement");
+    context->lua_context_class = (jclass)env->NewWeakGlobalRef(clazz);
+    context->indexMethod = env->GetMethodID(clazz, "indexMethod", "(J)I");
+    context->callMethod = env->GetMethodID(clazz,"callMethod","(JLjava/lang/String;)I");
+    context->newIndexMethod = env->GetMethodID(clazz,"newIndexMethod","(J)I");
+    context->invokeMethod = env->GetMethodID(clazz,"invokeMethod","(J)I");
+    context->releaseMethod = env->GetMethodID(clazz,"release","(J)V");
+    context->ptr = env->GetFieldID(clazz,"nativeLua","J");
     auto L = luaL_newstate();
     luaL_openlibs(L);
     void *p = lua_getextraspace(L);
@@ -480,6 +510,7 @@ Java_com_autolua_engine_base_LuaContextImplement_createLuaContext(JNIEnv *env, j
         luaL_Reg methods[] = {
                 {"__index",indexMethod},
                 {"__gc",release},
+                {"__call",invokeMethod},
                 {nullptr, nullptr}
         };
         luaL_setfuncs(L,methods,0);
@@ -520,4 +551,19 @@ Java_com_autolua_engine_base_LuaContextImplement_00024Companion_pcall(JNIEnv *en
                                                                       jint err_func){
     auto L = toLuaState(native_lua);
     return lua_pcall(L,n_args,n_results,err_func);
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_autolua_engine_base_LuaContextImplement_00024Companion_next(JNIEnv *env, jobject thiz,
+                                                                     jlong native_lua, jint index) {
+    auto L = toLuaState(native_lua);
+    return lua_next(L,index);
+}
+extern "C"
+JNIEXPORT jlong JNICALL
+Java_com_autolua_engine_base_LuaContextImplement_00024Companion_len(JNIEnv *env, jobject thiz,
+                                                                    jlong native_lua, jint index) {
+    auto L = toLuaState(native_lua);
+    return (jlong)luaL_len(L,index);
 }

@@ -65,7 +65,6 @@ class AutoLuaEngineProxy:AutoLuaEngine, Observable<AutoLuaEngine.State> by Obser
   override fun stop() {
     customScope.launch {
       engine?.stop()
-      engine = null
     }
   }
 
@@ -73,79 +72,13 @@ class AutoLuaEngineProxy:AutoLuaEngine, Observable<AutoLuaEngine.State> by Obser
     return engine?.getState(target) ?: AutoLuaEngine.State.IDLE
   }
 
-  override fun attach(messageObserver: AutoLuaEngine.MessageObserver) {
+  override fun destroy() {
     customScope.launch {
-      ensureEngine().attach(messageObserver)
+      engine?.destroy()
+      engine = null
     }
   }
 
-  override fun detach(messageObserver: AutoLuaEngine.MessageObserver) {
-    customScope.launch {
-      ensureEngine().detach(messageObserver)
-    }
-  }
-
-
-
-  override fun addRemoteService(remoteServerConfigure: AutoLuaEngine.RemoteServerConfigure) {
-    customScope.launch {
-      ensureEngine().addRemoteService(remoteServerConfigure)
-    }
-  }
-
-  override fun removeRemoteService(name: String) {
-    customScope.launch {
-      ensureEngine().removeRemoteService(name)
-    }
-  }
-
-  override fun setEnvironment(environment: List<AutoLuaEngine.Environment<*>>) {
-    customScope.launch {
-      ensureEngine().setEnvironment(environment)
-    }
-  }
-
-  override fun setLocalServices(services: List<AutoLuaEngine.LocalService<*>>) {
-    customScope.launch {
-      ensureEngine().setLocalServices(services)
-    }
-  }
-
-  override fun addCodeProvider(codeProvider: AutoLuaEngine.CodeProvider) {
-    customScope.launch {
-      ensureEngine().addCodeProvider(codeProvider)
-    }
-  }
-
-  override fun clearCodeProvider() {
-    customScope.launch {
-      ensureEngine().clearCodeProvider()
-    }
-  }
-
-  override fun addResourceProvider(resourceProvider: AutoLuaEngine.ResourceProvider) {
-    customScope.launch {
-      ensureEngine().addResourceProvider(resourceProvider)
-    }
-  }
-
-  override fun clearResourceProvider() {
-    customScope.launch {
-      ensureEngine().clearResourceProvider()
-    }
-  }
-
-  override fun removeCodeProvider(codeProvider: AutoLuaEngine.CodeProvider) {
-    customScope.launch {
-      ensureEngine().removeCodeProvider(codeProvider)
-    }
-  }
-
-  override fun removeResourceProvider(resourceProvider: AutoLuaEngine.ResourceProvider) {
-    customScope.launch {
-      ensureEngine().removeResourceProvider(resourceProvider)
-    }
-  }
 
   override fun execute(script: String, flags: Int): Int {
     customScope.launch {
